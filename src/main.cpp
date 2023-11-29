@@ -24,6 +24,7 @@
   MotorRL.setVelocity(speed, unit)
 
 #include "vex.h"
+#include <string>
 using namespace vex;
 competition Competition;
 brain Brain;
@@ -137,15 +138,15 @@ void temperatureMonitor();
 int main() {
   MainMenu StartMenu;
   StartMenu.run();
-  //thread TMON = thread(temperatureMonitor);
-  //Competition.autonomous(autonomous);
-  //Competition.drivercontrol(driverControl);
+  thread TMON = thread(temperatureMonitor);
+  Competition.autonomous(autonomous);
+  Competition.drivercontrol(driverControl);
   
-  //pre_auton();
+  pre_auton();
 
-  //while (true) {
-  //  wait(100, msec);
-  //}
+  while (true) {
+    wait(100, msec);
+  }
 }
 
 void temperatureMonitor() {
