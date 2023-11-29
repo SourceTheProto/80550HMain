@@ -139,7 +139,6 @@ int main() {
   Competition.drivercontrol(driverControl);
   
   pre_auton();
-  driverControl();
 
   while (true) {
     wait(100, msec);
