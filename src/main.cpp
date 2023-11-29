@@ -43,14 +43,30 @@ smartdrive Drivetrain = smartdrive(LeftDriveSmart, RightDriveSmart, Motion, 319.
 
 digital_out Wings = digital_out(Brain.ThreeWirePort.A);
 
-/* class MainMenu {
+// Settings
+const int MOTOR_TORQUE = 80;
+const double speedMultiplier = .3;
+const double spinMultiplier = .3;
+
+// Global Variables
+double leftSpeed = 0;
+double rightSpeed = 0;
+
+// Constants
+const double TILE_LENGTH = 8;
+const int TURN_ERROR = -6;
+const int SCREENX = 480;
+const int SCREENY = 272;
+const int C_SCREENX = 20;
+
+class MainMenu {
 public:
   void run() {
     
   }
 
   MainMenu() {
-    // Competition Button
+    /* // Competition Button
     CompetitionButton.text = "Competition Mode";
     CompetitionButton.menu = COMPETITION;
 
@@ -60,23 +76,23 @@ public:
 
     // Autonomous Button
     AutonButton.text = "Autonomous";
-    AutonButton.menu = AUTONOMOUS;
+    AutonButton.menu = AUTONOMOUS; */
   }
 
 private:
 
-  enum menuLink {COMPETITION, DRIVER_CONTROL, AUTONOMOUS};
+  /* enum menuLink {COMPETITION, DRIVER_CONTROL, AUTONOMOUS};
 
   struct menuButton {
     char *text;
     menuLink menu{};
-  };
+  }; */
 
   // Buttons
-  menuButton CompetitionButton;
+  /* menuButton CompetitionButton;
   menuButton DCButton;
-  menuButton AutonButton;
-}; */
+  menuButton AutonButton; */
+};
 
 void setBackground(const color &c) {
   Brain.Screen.setPenColor(c);
@@ -115,34 +131,21 @@ void driverControl(void) {
   }
 }
 
-// Settings
-const int MOTOR_TORQUE = 80;
-const double speedMultiplier = .3;
-const double spinMultiplier = .3;
-
-// Global Variables
-double leftSpeed = 0;
-double rightSpeed = 0;
-
-// Constants
-const double TILE_LENGTH = 8;
-const int TURN_ERROR = -6;
-const int SCREENX = 480;
-const int SCREENY = 272;
-
 // thread callbacks
 void temperatureMonitor();
 
 int main() {
-  thread TMON = thread(temperatureMonitor);
-  Competition.autonomous(autonomous);
-  Competition.drivercontrol(driverControl);
+  MainMenu StartMenu;
+  StartMenu.run();
+  //thread TMON = thread(temperatureMonitor);
+  //Competition.autonomous(autonomous);
+  //Competition.drivercontrol(driverControl);
   
-  pre_auton();
+  //pre_auton();
 
-  while (true) {
-    wait(100, msec);
-  }
+  //while (true) {
+  //  wait(100, msec);
+  //}
 }
 
 void temperatureMonitor() {
