@@ -47,7 +47,7 @@ digital_out Wings = digital_out(Brain.ThreeWirePort.A);
 // Settings
 const int MOTOR_TORQUE = 80;
   // Auton
-  const int DRIVE_VELOCITY = 40;
+  const int DRIVE_VELOCITY = 5;
   const int TURN_VELOCITY = 25;
   // Driver Control
   const double speedMultiplier = .3;
@@ -56,6 +56,8 @@ const int MOTOR_TORQUE = 80;
 // Global Variables
 double leftSpeed = 0;
 double rightSpeed = 0;
+
+double desiredAngle = 0;
 
 // Enumerations
 enum directional {REVERSE = -1, FORWARD = 1};
@@ -96,13 +98,13 @@ int main() {
 }
 
 void autonomous(void) {
-  
+  drive(FORWARD, 1);
 }
 
 void drive(directional direction, double dist)
 {
   double initialPosition = MotorFL.position(rev);
-  double initialHeading = -1*Motion.heading();
+  double initialHeading = Motion.heading();
 
   leftSide(DRIVE_VELOCITY, percent);
   rightSide(DRIVE_VELOCITY, percent);
@@ -117,27 +119,30 @@ void drive(directional direction, double dist)
       break;
   }
 
-  while ((double)(-1*MotorFL.position(rev)) != initialPosition + dist)
+  while ((double)MotorFL.position(rev) != initialPosition + dist)
   {
-    leftSide(DRIVE_VELOCITY + (-1*Motion.heading() - initialHeading), percent);
-    rightSide(DRIVE_VELOCITY - (-1*Motion.heading() - initialHeading), percent);
+    leftSide(DRIVE_VELOCITY + (Motion.heading() - initialHeading), percent);
+    rightSide(DRIVE_VELOCITY - (Motion.heading() - initialHeading), percent);
   }
   stopDriveMotors(hold);
   wait(.2, sec);
 }
 
 void turn (int angle) {
-  double desiredHeading = -1*Motion.heading() + angle;
-  double dHdgDecimal = desiredHeading - floor(desiredHeading);
-  desiredHeading = ((int)floor(desiredHeading) % 360) + dHdgDecimal;
+  double desiredHeading = Motion.heading() + angle;
+  while (desiredHeading > 360) {
+    desiredHeading -= 360;
+  }
+  
+  desiredAngle = desiredHeading;
 
   leftSide(TURN_VELOCITY, percent);
   rightSide(-1*TURN_VELOCITY, percent);
   spinDriveMotors(forward);
 
-  while (-1*(double)Motion.heading() != desiredHeading)
+  while ((double)Motion.heading() != desiredHeading)
   {
-    double sqrtdifference = sqrt(desiredHeading - (-1*Motion.heading()));
+    double sqrtdifference = log((desiredHeading - (Motion.heading()))+1);
     leftSide((TURN_VELOCITY/10) * sqrtdifference, percent);
     rightSide(-1*(TURN_VELOCITY/10) * sqrtdifference, percent);
   }
@@ -181,15 +186,21 @@ void temperatureMonitor() {
 
     // Printing all motor temperatures & average
     Brain.Screen.setCursor(1, 1);
-    Brain.Screen.print("%d", static_cast<int>(MotorFR.temperature(percent)));
+    Brain.Screen.print("%d", (int)(MotorFR.temperature(percent)));
     Brain.Screen.setCursor(7, 1);
-    Brain.Screen.print("%d", static_cast<int>(MotorFL.temperature(percent)));
+    Brain.Screen.print("%d", (int)(MotorFL.temperature(percent)));
     Brain.Screen.setCursor(1, 23);
-    Brain.Screen.print("%d", static_cast<int>(MotorRR.temperature(percent)));
+    Brain.Screen.print("%d", (int)(MotorRR.temperature(percent)));
     Brain.Screen.setCursor(7, 23);
-    Brain.Screen.print("%d", static_cast<int>(MotorRL.temperature(percent)));
+    Brain.Screen.print("%d", (int)(MotorRL.temperature(percent)));
     Brain.Screen.setCursor(3, 7);
-    Brain.Screen.print("MotorAVG: %d", static_cast<int>(motorTempAvg));
+    Brain.Screen.print("MotorAVG: %d", (int)(motorTempAvg));
+
+    // Printing Heading
+    Brain.Screen.setCursor(3, 1);
+    Brain.Screen.print("%d", (int)(Motion.heading()));
+    Brain.Screen.setCursor(4, 1);
+    Brain.Screen.print("%d", (int)(desiredAngle));
   }
 }
 
