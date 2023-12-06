@@ -32,10 +32,10 @@ using namespace vex;
 brain Brain;
 controller Controller1 = controller(primary);
 
-motor MotorFL = motor(PORT14, ratio18_1, false);
-motor MotorRL = motor(PORT16, ratio18_1, false);
-motor MotorFR = motor(PORT20, ratio18_1, true);
-motor MotorRR = motor(PORT1, ratio18_1, true);
+motor MotorFL = motor(PORT14, ratio18_1, true);
+motor MotorRL = motor(PORT16, ratio18_1, true);
+motor MotorFR = motor(PORT20, ratio18_1, false);
+motor MotorRR = motor(PORT1, ratio18_1, false);
 
 inertial Motion = inertial(PORT3);
 motor_group LeftDriveSmart = motor_group(MotorFL, MotorRL);
@@ -71,7 +71,6 @@ const int C_SCREENX = 20;
 void temperatureMonitor();
 
 // Function declarations
-void pre_auton();
 void autonomous();
 void driverControl();
 void drive(directional direction, double dist);
@@ -81,18 +80,69 @@ void turn (int angle);
 // MAIN FUNCTION HERE
 
 int main() {
+  Motion.calibrate();
   //MainMenu StartMenu;
   //StartMenu.run();
+  while (Motion.isCalibrating()) {wait(5, msec);}
   thread TMON = thread(temperatureMonitor);
   //Competition.autonomous(autonomous);
   //Competition.drivercontrol(driverControl);
   
-  pre_auton();
-  //autonomous();
+  autonomous();
 
   while (true) {
     wait(100, msec);
   }
+}
+
+void autonomous(void) {
+  
+}
+
+void drive(directional direction, double dist)
+{
+  double initialPosition = MotorFL.position(rev);
+  double initialHeading = -1*Motion.heading();
+
+  leftSide(DRIVE_VELOCITY, percent);
+  rightSide(DRIVE_VELOCITY, percent);
+
+  switch (direction) {
+    case REVERSE:
+      spinDriveMotors(reverse);
+      break;
+    
+    case FORWARD:
+      spinDriveMotors(forward);
+      break;
+  }
+
+  while ((double)(-1*MotorFL.position(rev)) != initialPosition + dist)
+  {
+    leftSide(DRIVE_VELOCITY + (-1*Motion.heading() - initialHeading), percent);
+    rightSide(DRIVE_VELOCITY - (-1*Motion.heading() - initialHeading), percent);
+  }
+  stopDriveMotors(hold);
+  wait(.2, sec);
+}
+
+void turn (int angle) {
+  double desiredHeading = -1*Motion.heading() + angle;
+  double dHdgDecimal = desiredHeading - floor(desiredHeading);
+  desiredHeading = ((int)floor(desiredHeading) % 360) + dHdgDecimal;
+
+  leftSide(TURN_VELOCITY, percent);
+  rightSide(-1*TURN_VELOCITY, percent);
+  spinDriveMotors(forward);
+
+  while (-1*(double)Motion.heading() != desiredHeading)
+  {
+    double sqrtdifference = sqrt(desiredHeading - (-1*Motion.heading()));
+    leftSide((TURN_VELOCITY/10) * sqrtdifference, percent);
+    rightSide(-1*(TURN_VELOCITY/10) * sqrtdifference, percent);
+  }
+  stopDriveMotors(hold);
+  wait(.2, sec);
 }
 
 void driverControl(void) {
@@ -115,62 +165,6 @@ void driverControl(void) {
       stopDriveMotors(brake);
     }
   }
-}
-
-void pre_auton(void) {
-  Drivetrain.setDriveVelocity(30, percent);
-  Drivetrain.setTurnVelocity(20, percent);
-}
-
-void autonomous(void) {
-  drive(FORWARD, 1);
-  turn(90);
-}
-
-void drive(directional direction, double dist)
-{
-  double initialPosition = MotorFL.position(rev);
-  double initialHeading = Motion.heading();
-
-  leftSide(DRIVE_VELOCITY, percent);
-  rightSide(DRIVE_VELOCITY, percent);
-
-  switch (direction) {
-    case REVERSE:
-      spinDriveMotors(reverse);
-      break;
-    
-    case FORWARD:
-      spinDriveMotors(forward);
-      break;
-  }
-
-  while ((double)(MotorFL.position(rev)) != initialPosition + dist)
-  {
-    leftSide(DRIVE_VELOCITY + (Motion.heading() - initialHeading), percent);
-    rightSide(DRIVE_VELOCITY - (Motion.heading() - initialHeading), percent);
-  }
-  stopDriveMotors(hold);
-  wait(.2, sec);
-}
-
-void turn (int angle) {
-  double desiredHeading = Motion.heading() + angle;
-  double dHdgDecimal = desiredHeading - floor(desiredHeading);
-  desiredHeading = ((int)floor(desiredHeading) % 360) + dHdgDecimal;
-
-  leftSide(TURN_VELOCITY, percent);
-  rightSide(-1*TURN_VELOCITY, percent);
-  spinDriveMotors(forward);
-
-  while ((double)Motion.heading() != desiredHeading)
-  {
-    double sqrtdifference = sqrt(desiredHeading - Motion.heading());
-    leftSide((TURN_VELOCITY/10) * sqrtdifference, percent);
-    rightSide(-1*(TURN_VELOCITY/10) * sqrtdifference, percent);
-  }
-  stopDriveMotors(hold);
-  wait(.2, sec);
 }
 
 void temperatureMonitor() {
