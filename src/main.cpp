@@ -32,10 +32,10 @@ using namespace vex;
 brain Brain;
 controller Controller1 = controller(primary);
 
-motor MotorFL = motor(PORT20, ratio18_1, false);
-motor MotorRL = motor(PORT14, ratio18_1, false);
-motor MotorFR = motor(PORT1, ratio18_1, true);
-motor MotorRR = motor(PORT16, ratio18_1, true);
+motor MotorFL = motor(PORT14, ratio18_1, false);
+motor MotorRL = motor(PORT16, ratio18_1, false);
+motor MotorFR = motor(PORT20, ratio18_1, true);
+motor MotorRR = motor(PORT1, ratio18_1, true);
 
 inertial Motion = inertial(PORT3);
 motor_group LeftDriveSmart = motor_group(MotorFL, MotorRL);
@@ -88,7 +88,7 @@ int main() {
   //Competition.drivercontrol(driverControl);
   
   pre_auton();
-  autonomous();
+  //autonomous();
 
   while (true) {
     wait(100, msec);
@@ -123,7 +123,8 @@ void pre_auton(void) {
 }
 
 void autonomous(void) {
-  
+  drive(FORWARD, 1);
+  turn(90);
 }
 
 void drive(directional direction, double dist)
