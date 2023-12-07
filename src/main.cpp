@@ -63,7 +63,7 @@ double desiredAngle = 0;
 enum directional {REVERSE = -1, FORWARD = 1};
 
 // Constants
-const double TILE_LENGTH = 8;
+const int TILE_LENGTH = 24;
 const int WHEEL_DIAMETER = 4;
 const int SCREENX = 480;
 const int SCREENY = 272;
