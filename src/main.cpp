@@ -64,9 +64,11 @@ enum directional {REVERSE = -1, FORWARD = 1};
 
 // Constants
 const double TILE_LENGTH = 8;
+const int WHEEL_DIAMETER = 4;
 const int SCREENX = 480;
 const int SCREENY = 272;
 const int C_SCREENX = 20;
+const float pi = (245850922/78256779);
 
 
 // Thread callbacks
@@ -106,6 +108,8 @@ void drive(directional direction, double dist)
   double initialPosition = MotorFL.position(rev);
   double initialHeading = Motion.heading();
 
+  dist = (dist*TILE_LENGTH)/(pi*WHEEL_DIAMETER);
+
   leftSide(DRIVE_VELOCITY, percent);
   rightSide(DRIVE_VELOCITY, percent);
 
@@ -121,8 +125,12 @@ void drive(directional direction, double dist)
 
   while ((double)MotorFL.position(rev) != initialPosition + dist)
   {
-    leftSide(DRIVE_VELOCITY + (Motion.heading() - initialHeading), percent);
-    rightSide(DRIVE_VELOCITY - (Motion.heading() - initialHeading), percent);
+    double angleDist = (Motion.heading() - initialHeading);
+    if(angleDist > 180) {
+      angleDist -= 360;
+    }
+    leftSide(DRIVE_VELOCITY - angleDist, percent);
+    rightSide(DRIVE_VELOCITY + angleDist, percent);
   }
   stopDriveMotors(hold);
   wait(.2, sec);
@@ -197,10 +205,12 @@ void temperatureMonitor() {
     Brain.Screen.print("MotorAVG: %d", (int)(motorTempAvg));
 
     // Printing Heading
-    Brain.Screen.setCursor(3, 1);
+    Brain.Screen.setCursor(2, 1);
     Brain.Screen.print("%d", (int)(Motion.heading()));
-    Brain.Screen.setCursor(4, 1);
+    Brain.Screen.setCursor(3, 1);
     Brain.Screen.print("%d", (int)(desiredAngle));
+    /*Brain.Screen.setCursor(4, 1);
+    Brain.Screen.print("%d", (int)(desiredAngle));*/
   }
 }
 
