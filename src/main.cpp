@@ -105,7 +105,7 @@ int main() {
 }
 
 void autonomous(void) {
-  drive(FORWARD, 2);
+  drive(FORWARD, 2.5);
   Wings.set(true);
   turn(FOR, 90);
   drive(FORWARD, .25);
@@ -231,38 +231,3 @@ void temperatureMonitor() {
     Brain.Screen.print("%d", (int)(Motion.heading()));
   }
 }
-
-class MainMenu {
-public:
-  void run() {
-    
-  }
-
-  MainMenu() {
-    /* // Competition Button
-    CompetitionButton.text = "Competition Mode";
-    CompetitionButton.menu = COMPETITION;
-
-    // Driver Control Button
-    DCButton.text = "Driver Control";
-    DCButton.menu = DRIVER_CONTROL;
-
-    // Autonomous Button
-    AutonButton.text = "Autonomous";
-    AutonButton.menu = AUTONOMOUS; */
-  }
-
-private:
-
-  /* enum menuLink {COMPETITION, DRIVER_CONTROL, AUTONOMOUS};
-
-  struct menuButton {
-    char *text;
-    menuLink menu{};
-  };
-
-  // Buttons
-  menuButton CompetitionButton;
-  menuButton DCButton;
-  menuButton AutonButton; */
-};
