@@ -47,7 +47,7 @@ digital_out Wings = digital_out(Brain.ThreeWirePort.A);
 // Settings
 const int MOTOR_TORQUE = 80;
   // Auton
-  const int DRIVE_VELOCITY = 5;
+  const int DRIVE_VELOCITY = 20;
   const int TURN_VELOCITY = 25;
   // Driver Control
   const double speedMultiplier = .3;
@@ -63,12 +63,12 @@ double desiredAngle = 0;
 enum directional {REVERSE = -1, FORWARD = 1};
 
 // Constants
-const int TILE_LENGTH = 24;
+const int TILE_LENGTH = 12;
 const int WHEEL_DIAMETER = 4;
 const int SCREENX = 480;
 const int SCREENY = 272;
 const int C_SCREENX = 20;
-const float pi = (245850922/78256779);
+const float pi = 3.141592;
 
 
 // Thread callbacks
@@ -88,10 +88,9 @@ int main() {
   //MainMenu StartMenu;
   //StartMenu.run();
   while (Motion.isCalibrating()) {wait(5, msec);}
-  thread TMON = thread(temperatureMonitor);
+  //thread TMON = thread(temperatureMonitor);
   //Competition.autonomous(autonomous);
   //Competition.drivercontrol(driverControl);
-  
   autonomous();
 
   while (true) {
@@ -100,7 +99,7 @@ int main() {
 }
 
 void autonomous(void) {
-  drive(FORWARD, 1);
+  drive(FORWARD, 3);
 }
 
 void drive(directional direction, double dist)
@@ -122,8 +121,8 @@ void drive(directional direction, double dist)
       spinDriveMotors(forward);
       break;
   }
-
-  while ((double)MotorFL.position(rev) != initialPosition + dist)
+  
+  while ((double)MotorFL.position(rev) <= initialPosition + dist)
   {
     double angleDist = (Motion.heading() - initialHeading);
     if(angleDist > 180) {
