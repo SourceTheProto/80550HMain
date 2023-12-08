@@ -52,7 +52,7 @@ const int MOTOR_TORQUE = 80;
   const int TURN_VELOCITY = 25;
 
   // Driver Control
-  const double DCspeedMult = .3;
+  const double DCspeedMult = .6;
   const double DCspinMult = .3;
 
 // Global Variables
@@ -86,6 +86,11 @@ void turn(turnMethod method, int angle);
 
 int main() {
   Motion.calibrate();
+  Brain.Screen.clearScreen(red);
+  Brain.Screen.setFont(mono40);
+  Brain.Screen.setPenColor(white);
+  Brain.Screen.setFillColor(red);
+  Brain.Screen.print("Calibrating...");
   //MainMenu StartMenu;
   //StartMenu.run();
   while (Motion.isCalibrating()) {wait(5, msec);}
@@ -101,10 +106,10 @@ int main() {
 
 void autonomous(void) {
   drive(FORWARD, 2);
+  Wings.set(true);
   turn(FOR, 90);
-  turn(FOR, 90);
-  drive(FORWARD, 2);
-  turn(FOR, 180);
+  drive(FORWARD, .25);
+  Wings.set(false);
 }
 
 void drive(directional direction, double dist)
@@ -173,14 +178,14 @@ void turn(turnMethod method, int angle) {
 void driverControl(void) {
   MotorFR.setMaxTorque(MOTOR_TORQUE, percent);
   MotorRR.setMaxTorque(MOTOR_TORQUE, percent);
-  MotorFL.setMaxTorque(MOTOR_TORQUE-(MOTOR_TORQUE/5.5), percent);
-  MotorRL.setMaxTorque(MOTOR_TORQUE-(MOTOR_TORQUE/5.5), percent);
+  MotorFL.setMaxTorque(MOTOR_TORQUE, percent);
+  MotorRL.setMaxTorque(MOTOR_TORQUE, percent);
 
   while (true) {
     // Drive Control
     // Setting variables
-    leftSpeed = (Controller1.Axis3.position()*DCspeedMult)+(Controller1.Axis1.position()*DCspinMult);
-    rightSpeed = (Controller1.Axis3.position()*DCspeedMult)-(Controller1.Axis1.position()*DCspinMult);
+    leftSpeed = (Controller1.Axis3.position()*DCspeedMult) + (Controller1.Axis1.position()*DCspinMult);
+    rightSpeed = (Controller1.Axis3.position()*DCspeedMult) - (Controller1.Axis1.position()*DCspinMult);
     // Applying Movement
     if (fabs(leftSpeed)+fabs(rightSpeed) > 5) {
       leftSide(leftSpeed, percent);
@@ -189,14 +194,19 @@ void driverControl(void) {
     } else {
       stopDriveMotors(brake);
     }
+
+    // Wing Control
+    if (Controller1.ButtonL2.pressing()) {
+      Wings.set(true);
+    } else if (Controller1.ButtonR2.pressing()) {
+      Wings.set(false);
+    }
   }
 }
 
 void temperatureMonitor() {
   double motorTempAvg = 0;
-  Brain.Screen.setPenColor(black);
-  Brain.Screen.setFillColor(black);
-  Brain.Screen.drawRectangle(0, 0, SCREENX, SCREENY);
+  Brain.Screen.clearScreen(black);
   while (true) {
     motorTempAvg = (MotorFR.temperature(percent) + MotorFL.temperature(percent)
                     + MotorRR.temperature(percent) + MotorRL.temperature(percent)) / 4;
