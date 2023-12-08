@@ -44,6 +44,44 @@ smartdrive Drivetrain = smartdrive(LeftDriveSmart, RightDriveSmart, Motion, 319.
 
 digital_out Wings = digital_out(Brain.ThreeWirePort.A);
 
+
+class MainMenu {
+public:
+  void run() {
+    renderButtons();
+  }
+
+  MainMenu() {
+    // Competition Button
+    CompetitionButton.text = "Competition Mode";
+    CompetitionButton.menu = COMPETITION;
+
+    // Driver Control Button
+    DCButton.text = "Driver Control";
+    DCButton.menu = DRIVER_CONTROL;
+
+    // Autonomous Button
+    AutonButton.text = "Autonomous";
+    AutonButton.menu = AUTONOMOUS;
+  }
+
+private:
+
+  void renderButtons();
+
+  enum menuLink {COMPETITION, DRIVER_CONTROL, AUTONOMOUS};
+
+  struct menuButton {
+    std::string text;
+    menuLink menu{};
+  };
+
+  // Buttons
+  menuButton CompetitionButton;
+  menuButton DCButton;
+  menuButton AutonButton;
+};
+
 // Settings
 const int MOTOR_TORQUE = 80;
 
