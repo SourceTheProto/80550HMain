@@ -46,21 +46,22 @@ digital_out Wings = digital_out(Brain.ThreeWirePort.A);
 
 // Settings
 const int MOTOR_TORQUE = 80;
+
   // Auton
   const int DRIVE_VELOCITY = 20;
   const int TURN_VELOCITY = 25;
+
   // Driver Control
-  const double speedMultiplier = .3;
-  const double spinMultiplier = .3;
+  const double DCspeedMult = .3;
+  const double DCspinMult = .3;
 
 // Global Variables
 double leftSpeed = 0;
 double rightSpeed = 0;
 
-double desiredAngle = 0;
-
 // Enumerations
 enum directional {REVERSE = -1, FORWARD = 1};
+enum turnMethod {FOR, TO};
 
 // Constants
 const int TILE_LENGTH = 24;
@@ -78,7 +79,7 @@ void temperatureMonitor();
 void autonomous();
 void driverControl();
 void drive(directional direction, double dist);
-void turn (int angle);
+void turn(turnMethod method, int angle);
 
 
 // MAIN FUNCTION HERE
@@ -88,7 +89,7 @@ int main() {
   //MainMenu StartMenu;
   //StartMenu.run();
   while (Motion.isCalibrating()) {wait(5, msec);}
-  //thread TMON = thread(temperatureMonitor);
+  thread TMON = thread(temperatureMonitor);
   //Competition.autonomous(autonomous);
   //Competition.drivercontrol(driverControl);
   autonomous();
@@ -99,7 +100,11 @@ int main() {
 }
 
 void autonomous(void) {
-  drive(FORWARD, 3);
+  drive(FORWARD, 2);
+  turn(FOR, 90);
+  turn(FOR, 90);
+  drive(FORWARD, 2);
+  turn(FOR, 180);
 }
 
 void drive(directional direction, double dist)
@@ -132,26 +137,34 @@ void drive(directional direction, double dist)
     rightSide(DRIVE_VELOCITY + angleDist, percent);
   }
   stopDriveMotors(hold);
+  turn(TO, initialHeading);
   wait(.2, sec);
 }
 
-void turn (int angle) {
-  double desiredHeading = Motion.heading() + angle;
-  while (desiredHeading > 360) {
-    desiredHeading -= 360;
+void turn(turnMethod method, int angle) {
+  double desiredHeading;
+  switch (method) {
+    case FOR:
+      desiredHeading = Motion.heading() + angle;
+      while (desiredHeading > 360) {
+        desiredHeading -= 360;
+      }
+      break;
+    
+    case TO:
+      desiredHeading = angle;
+      break;
   }
-  
-  desiredAngle = desiredHeading;
 
   leftSide(TURN_VELOCITY, percent);
   rightSide(-1*TURN_VELOCITY, percent);
   spinDriveMotors(forward);
 
-  while ((double)Motion.heading() != desiredHeading)
+  while ((double)Motion.heading() <= desiredHeading)
   {
-    double sqrtdifference = log((desiredHeading - (Motion.heading()))+1);
-    leftSide((TURN_VELOCITY/10) * sqrtdifference, percent);
-    rightSide(-1*(TURN_VELOCITY/10) * sqrtdifference, percent);
+    double logDifference = log((desiredHeading - (Motion.heading()))+1);
+    leftSide((TURN_VELOCITY/10) * logDifference, percent);
+    rightSide(-1*(TURN_VELOCITY/10) * logDifference, percent);
   }
   stopDriveMotors(hold);
   wait(.2, sec);
@@ -166,8 +179,8 @@ void driverControl(void) {
   while (true) {
     // Drive Control
     // Setting variables
-    leftSpeed = (Controller1.Axis3.position()*speedMultiplier) + (Controller1.Axis1.position()*spinMultiplier);
-    rightSpeed = (Controller1.Axis3.position()*speedMultiplier) - (Controller1.Axis1.position()*spinMultiplier);
+    leftSpeed = (Controller1.Axis3.position()*DCspeedMult)+(Controller1.Axis1.position()*DCspinMult);
+    rightSpeed = (Controller1.Axis3.position()*DCspeedMult)-(Controller1.Axis1.position()*DCspinMult);
     // Applying Movement
     if (fabs(leftSpeed)+fabs(rightSpeed) > 5) {
       leftSide(leftSpeed, percent);
@@ -203,13 +216,9 @@ void temperatureMonitor() {
     Brain.Screen.setCursor(3, 7);
     Brain.Screen.print("MotorAVG: %d", (int)(motorTempAvg));
 
-    // Printing Heading
+    // Debug Printing
     Brain.Screen.setCursor(2, 1);
     Brain.Screen.print("%d", (int)(Motion.heading()));
-    Brain.Screen.setCursor(3, 1);
-    Brain.Screen.print("%d", (int)(desiredAngle));
-    /*Brain.Screen.setCursor(4, 1);
-    Brain.Screen.print("%d", (int)(desiredAngle));*/
   }
 }
 
