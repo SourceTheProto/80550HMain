@@ -63,7 +63,7 @@ double desiredAngle = 0;
 enum directional {REVERSE = -1, FORWARD = 1};
 
 // Constants
-const int TILE_LENGTH = 12;
+const int TILE_LENGTH = 24;
 const int WHEEL_DIAMETER = 4;
 const int SCREENX = 480;
 const int SCREENY = 272;
@@ -107,7 +107,7 @@ void drive(directional direction, double dist)
   double initialPosition = MotorFL.position(rev);
   double initialHeading = Motion.heading();
 
-  dist = (dist*TILE_LENGTH)/(pi*WHEEL_DIAMETER);
+  dist = (dist*(TILE_LENGTH/2))/(pi*WHEEL_DIAMETER);
 
   leftSide(DRIVE_VELOCITY, percent);
   rightSide(DRIVE_VELOCITY, percent);
