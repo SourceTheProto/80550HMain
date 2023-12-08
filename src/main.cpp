@@ -26,7 +26,7 @@
 #include "vex.h"
 #include <string>
 using namespace vex;
-//competition Competition;
+competition Competition;
 
 // Hardware
 brain Brain;
@@ -95,10 +95,9 @@ int main() {
   //StartMenu.run();
   while (Motion.isCalibrating()) {wait(5, msec);}
   thread TMON = thread(temperatureMonitor);
-  //Competition.autonomous(autonomous);
-  //Competition.drivercontrol(driverControl);
-  autonomous();
-
+  Competition.autonomous(autonomous);
+  Competition.drivercontrol(driverControl);
+  
   while (true) {
     wait(100, msec);
   }
