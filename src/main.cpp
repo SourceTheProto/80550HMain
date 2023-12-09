@@ -25,8 +25,9 @@
 
 #include "vex.h"
 #include <string>
+#include <vector>
 using namespace vex;
-//competition Competition;
+competition Competition;
 
 // Hardware
 brain Brain;
@@ -47,8 +48,39 @@ digital_out Wings = digital_out(Brain.ThreeWirePort.A);
 
 class MainMenu {
 public:
-  void run() {
-    renderButtons();
+  enum menuLink {NONE, COMPETITION, DRIVER_CONTROL, AUTONOMOUS};
+
+  struct menuButton {
+    std::string text;
+    menuLink menu = NONE;
+  };
+
+  menuLink run() {
+    int buttonIndex = 0;
+    menuLink selectedMenu = NONE;
+    while (selectedMenu == NONE)
+    {
+      Controller1.Screen.setCursor(4, 1);
+      Controller1.Screen.print("< %s >", menuButtons[buttonIndex].text);
+      
+      while (true)
+      {
+        if (Controller1.ButtonLeft.pressing()) {
+          buttonIndex--;
+          if (buttonIndex < 0) {buttonIndex = 2;}
+          while (Controller1.ButtonLeft.pressing()) {wait(5, msec);}
+          break;
+        } else if (Controller1.ButtonRight.pressing()) {
+          buttonIndex++;
+          if (buttonIndex > 2) {buttonIndex = 0;}
+          while (Controller1.ButtonRight.pressing()) {wait(5, msec);}
+          break;
+        } else if (Controller1.ButtonA.pressing()) {
+          while (Controller1.ButtonA.pressing()) {wait(5, msec);}
+          return menuButtons[buttonIndex].menu;
+        }
+      }
+    }
   }
 
   MainMenu() {
@@ -63,18 +95,16 @@ public:
     // Autonomous Button
     AutonButton.text = "Autonomous";
     AutonButton.menu = AUTONOMOUS;
+
+    menuButtons.reserve(3);
+    menuButtons.push_back(CompetitionButton);
+    menuButtons.push_back(DCButton);
+    menuButtons.push_back(AutonButton);
   }
 
 private:
 
-  void renderButtons();
-
-  enum menuLink {COMPETITION, DRIVER_CONTROL, AUTONOMOUS};
-
-  struct menuButton {
-    std::string text;
-    menuLink menu{};
-  };
+  std::vector<menuButton> menuButtons;
 
   // Buttons
   menuButton CompetitionButton;
@@ -129,13 +159,21 @@ int main() {
   Brain.Screen.setPenColor(white);
   Brain.Screen.setFillColor(red);
   Brain.Screen.print("Calibrating...");
-  //MainMenu StartMenu;
-  //StartMenu.run();
-  while (Motion.isCalibrating()) {wait(5, msec);}
-  thread TMON = thread(temperatureMonitor);
-  //Competition.autonomous(autonomous);
-  //Competition.drivercontrol(driverControl);
-  autonomous();
+  MainMenu StartMenu;
+  if (StartMenu.run() == StartMenu.COMPETITION) {
+    Competition.autonomous(autonomous);
+    Competition.drivercontrol(driverControl);
+    while (Motion.isCalibrating()) {wait(5, msec);}
+    thread TMON = thread(temperatureMonitor);
+  } else if (StartMenu.run() == StartMenu.DRIVER_CONTROL) {
+    while (Motion.isCalibrating()) {wait(5, msec);}
+    thread TMON = thread(temperatureMonitor);
+    driverControl();
+  } else if (StartMenu.run() == StartMenu.AUTONOMOUS) {
+      while (Motion.isCalibrating()) {wait(5, msec);}
+      thread TMON = thread(temperatureMonitor);
+      autonomous();
+  }
 
   while (true) {
     wait(100, msec);
@@ -244,7 +282,10 @@ void driverControl(void) {
 
 void temperatureMonitor() {
   double motorTempAvg = 0;
-  Brain.Screen.clearScreen(black);
+  Brain.Screen.clearScreen();
+  Brain.Screen.setFillColor(red);
+  Brain.Screen.setPenColor(red);
+  Brain.Screen.drawRectangle(0, 0, SCREENX, SCREENY);
   while (true) {
     motorTempAvg = (MotorFR.temperature(percent) + MotorFL.temperature(percent)
                     + MotorRR.temperature(percent) + MotorRL.temperature(percent)) / 4;
