@@ -190,7 +190,7 @@ int main() {
 }
 
 void autonomous(void) {
-  drive(FORWARD, 2.5);
+  drive(FORWARD, 2);
   Wings.set(true);
   turn(FOR, 90);
   drive(FORWARD, .25);
