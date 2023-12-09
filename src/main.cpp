@@ -24,7 +24,6 @@
   MotorRL.setVelocity(speed, unit)
 
 #include "vex.h"
-#include <string>
 #include <vector>
 using namespace vex;
 competition Competition;
@@ -45,23 +44,37 @@ smartdrive Drivetrain = smartdrive(LeftDriveSmart, RightDriveSmart, Motion, 319.
 
 digital_out Wings = digital_out(Brain.ThreeWirePort.A);
 
+// Enumerations
+enum directional {REVERSE = -1, FORWARD = 1};
+enum turnMethod {FOR, TO};
+enum menuLink {NONE, COMPETITION, DRIVER_CONTROL, AUTONOMOUS};
+
+// Constants
+const int TILE_LENGTH = 24;
+const int WHEEL_DIAMETER = 4;
+const int SCREENX = 480;
+const int SCREENY = 272;
+const int C_SCREENX = 20;
+const float pi = 3.141592;
 
 class MainMenu {
 public:
-  enum menuLink {NONE, COMPETITION, DRIVER_CONTROL, AUTONOMOUS};
 
   struct menuButton {
-    std::string text;
+    char* text;
     menuLink menu = NONE;
   };
 
   menuLink run() {
     int buttonIndex = 0;
-    menuLink selectedMenu = NONE;
-    while (selectedMenu == NONE)
+    
+    while (true)
     {
+      clearDisplay();
       Controller1.Screen.setCursor(4, 1);
-      Controller1.Screen.print("< %s >", menuButtons[buttonIndex].text);
+      Controller1.Screen.print("< ");
+      Controller1.Screen.print(menuButtons[buttonIndex].text);
+      Controller1.Screen.print(" >");
       
       while (true)
       {
@@ -77,6 +90,7 @@ public:
           break;
         } else if (Controller1.ButtonA.pressing()) {
           while (Controller1.ButtonA.pressing()) {wait(5, msec);}
+          clearDisplay();
           return menuButtons[buttonIndex].menu;
         }
       }
@@ -110,6 +124,11 @@ private:
   menuButton CompetitionButton;
   menuButton DCButton;
   menuButton AutonButton;
+
+  void clearDisplay() {
+    Controller1.Screen.setCursor(4, 1);
+    Controller1.Screen.print("                            ");
+  }
 };
 
 // Settings
@@ -127,19 +146,6 @@ const int MOTOR_TORQUE = 80;
 double leftSpeed = 0;
 double rightSpeed = 0;
 
-// Enumerations
-enum directional {REVERSE = -1, FORWARD = 1};
-enum turnMethod {FOR, TO};
-
-// Constants
-const int TILE_LENGTH = 24;
-const int WHEEL_DIAMETER = 4;
-const int SCREENX = 480;
-const int SCREENY = 272;
-const int C_SCREENX = 20;
-const float pi = 3.141592;
-
-
 // Thread callbacks
 void temperatureMonitor();
 
@@ -148,7 +154,6 @@ void autonomous();
 void driverControl();
 void drive(directional direction, double dist);
 void turn(turnMethod method, int angle);
-
 
 // MAIN FUNCTION HERE
 
@@ -160,16 +165,19 @@ int main() {
   Brain.Screen.setFillColor(red);
   Brain.Screen.print("Calibrating...");
   MainMenu StartMenu;
-  if (StartMenu.run() == StartMenu.COMPETITION) {
+  
+  menuLink selectedMenu = StartMenu.run();
+
+  if (selectedMenu == COMPETITION) {
     Competition.autonomous(autonomous);
     Competition.drivercontrol(driverControl);
     while (Motion.isCalibrating()) {wait(5, msec);}
     thread TMON = thread(temperatureMonitor);
-  } else if (StartMenu.run() == StartMenu.DRIVER_CONTROL) {
+  } else if (selectedMenu == DRIVER_CONTROL) {
     while (Motion.isCalibrating()) {wait(5, msec);}
     thread TMON = thread(temperatureMonitor);
     driverControl();
-  } else if (StartMenu.run() == StartMenu.AUTONOMOUS) {
+  } else if (selectedMenu == AUTONOMOUS) {
       while (Motion.isCalibrating()) {wait(5, msec);}
       thread TMON = thread(temperatureMonitor);
       autonomous();
@@ -283,8 +291,8 @@ void driverControl(void) {
 void temperatureMonitor() {
   double motorTempAvg = 0;
   Brain.Screen.clearScreen();
-  Brain.Screen.setFillColor(red);
-  Brain.Screen.setPenColor(red);
+  Brain.Screen.setFillColor(black);
+  Brain.Screen.setPenColor(black);
   Brain.Screen.drawRectangle(0, 0, SCREENX, SCREENY);
   while (true) {
     motorTempAvg = (MotorFR.temperature(percent) + MotorFL.temperature(percent)
@@ -304,9 +312,5 @@ void temperatureMonitor() {
     Brain.Screen.print("%d", (int)(MotorRL.temperature(percent)));
     Brain.Screen.setCursor(3, 7);
     Brain.Screen.print("MotorAVG: %d", (int)(motorTempAvg));
-
-    // Debug Printing
-    Brain.Screen.setCursor(2, 1);
-    Brain.Screen.print("%d", (int)(Motion.heading()));
   }
 }
