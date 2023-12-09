@@ -219,12 +219,12 @@ void drive(directional direction, double dist)
   
   while ((double)MotorFL.position(rev) <= initialPosition + dist)
   {
-    double angleDist = (Motion.heading() - initialHeading);
-    if(angleDist > 180) {
-      angleDist -= 360;
+    double angleDistMult = pow((Motion.heading() - initialHeading), 3)/1000;
+    if(angleDistMult > 180) {
+      angleDistMult -= 360;
     }
-    leftSide(DRIVE_VELOCITY - angleDist, percent);
-    rightSide(DRIVE_VELOCITY + angleDist, percent);
+    leftSide(DRIVE_VELOCITY - angleDistMult, percent);
+    rightSide(DRIVE_VELOCITY + angleDistMult, percent);
   }
   stopDriveMotors(hold);
   turn(TO, initialHeading);
