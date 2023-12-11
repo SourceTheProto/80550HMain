@@ -38,9 +38,6 @@ motor MotorFR = motor(PORT20, ratio18_1, false);
 motor MotorRR = motor(PORT1, ratio18_1, false);
 
 inertial Motion = inertial(PORT3);
-motor_group LeftDriveSmart = motor_group(MotorFL, MotorRL);
-motor_group RightDriveSmart = motor_group(MotorFR, MotorRR);
-smartdrive Drivetrain = smartdrive(LeftDriveSmart, RightDriveSmart, Motion, 319.19, 320, 40, mm, 1);
 
 digital_out Wings = digital_out(Brain.ThreeWirePort.A);
 
