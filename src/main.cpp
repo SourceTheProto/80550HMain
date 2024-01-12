@@ -37,6 +37,8 @@ motor MotorRL = motor(PORT16, ratio18_1, true);
 motor MotorFR = motor(PORT20, ratio18_1, false);
 motor MotorRR = motor(PORT1, ratio18_1, false);
 
+motor Intake = motor(PORT2, ratio18_1, false);
+
 inertial Motion = inertial(PORT3);
 
 digital_out Wings = digital_out(Brain.ThreeWirePort.A);
@@ -129,7 +131,6 @@ private:
 };
 
 // Settings
-const int MOTOR_TORQUE = 80;
 
   // Auton
   const int DRIVE_VELOCITY = 20;
@@ -138,6 +139,9 @@ const int MOTOR_TORQUE = 80;
   // Driver Control
   const double DCspeedMult = .6;
   const double DCspinMult = .3;
+  const int DRIVE_TORQUE = 80;
+  const int INTAKE_TORQUE = 100;
+  const int INTAKE_SPEED = 50;
 
 // Global Variables
 double leftSpeed = 0;
@@ -258,10 +262,15 @@ void turn(turnMethod method, int angle) {
 }
 
 void driverControl(void) {
-  MotorFR.setMaxTorque(MOTOR_TORQUE, percent);
-  MotorRR.setMaxTorque(MOTOR_TORQUE, percent);
-  MotorFL.setMaxTorque(MOTOR_TORQUE, percent);
-  MotorRL.setMaxTorque(MOTOR_TORQUE, percent);
+  // Setting Drive Motor Settings
+  MotorFR.setMaxTorque(DRIVE_TORQUE, percent);
+  MotorRR.setMaxTorque(DRIVE_TORQUE, percent);
+  MotorFL.setMaxTorque(DRIVE_TORQUE, percent);
+  MotorRL.setMaxTorque(DRIVE_TORQUE, percent);
+
+  // Setting Intake Motor Settings
+  Intake.setMaxTorque(INTAKE_TORQUE, percent);
+  Intake.setVelocity(INTAKE_SPEED, percent);
 
   while (true) {
     // Drive Control
@@ -278,10 +287,18 @@ void driverControl(void) {
     }
 
     // Wing Control
-    if (Controller1.ButtonL2.pressing()) {
+    if (Controller1.ButtonR1.pressing()) {
       Wings.set(true);
-    } else if (Controller1.ButtonR2.pressing()) {
+    } else if (Controller1.ButtonL1.pressing()) {
       Wings.set(false);
+    }
+
+    if (Controller1.ButtonR2.pressing() && !Controller1.ButtonL2.pressing()) {
+      Intake.spin(forward);
+    } else if (Controller1.ButtonL2.pressing() && !Controller1.ButtonR2.pressing()) {
+      Intake.spin(reverse);
+    } else {
+      Intake.stop();
     }
   }
 }
