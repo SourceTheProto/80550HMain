@@ -23,14 +23,43 @@
   MotorFL.setVelocity(speed, unit); \
   MotorRL.setVelocity(speed, unit)
 
+/*
+$$$$$$$\  $$\                 $$\ $$\                               
+$$  __$$\ \__|                $$ |\__|                              
+$$ |  $$ |$$\ $$$$$$$\   $$$$$$$ |$$\ $$$$$$$\   $$$$$$\   $$$$$$$\ 
+$$$$$$$\ |$$ |$$  __$$\ $$  __$$ |$$ |$$  __$$\ $$  __$$\ $$  _____|
+$$  __$$\ $$ |$$ |  $$ |$$ /  $$ |$$ |$$ |  $$ |$$ /  $$ |\$$$$$$\  
+$$ |  $$ |$$ |$$ |  $$ |$$ |  $$ |$$ |$$ |  $$ |$$ |  $$ | \____$$\ 
+$$$$$$$  |$$ |$$ |  $$ |\$$$$$$$ |$$ |$$ |  $$ |\$$$$$$$ |$$$$$$$  |
+\_______/ \__|\__|  \__| \_______|\__|\__|  \__| \____$$ |\_______/ 
+                                                $$\   $$ |          
+                                                \$$$$$$  |          
+                                                 \_____*/
+#define A_FORWARD Axis3
+#define A_TURN Axis1
+#define D_WINGS_ENABLE ButtonR1
+#define D_WINGS_DISABLE ButtonL1
+#define D_INTAKE_FORWARD ButtonR2
+#define D_INTAKE_REVERSE ButtonL2
+
 #include "vex.h"
 #include <vector>
 using namespace vex;
 competition Competition;
 
-// Hardware
+/*
+$$\   $$\                           $$\                                             
+$$ |  $$ |                          $$ |                                            
+$$ |  $$ | $$$$$$\   $$$$$$\   $$$$$$$ |$$\  $$\  $$\  $$$$$$\   $$$$$$\   $$$$$$\  
+$$$$$$$$ | \____$$\ $$  __$$\ $$  __$$ |$$ | $$ | $$ | \____$$\ $$  __$$\ $$  __$$\ 
+$$  __$$ | $$$$$$$ |$$ |  \__|$$ /  $$ |$$ | $$ | $$ | $$$$$$$ |$$ |  \__|$$$$$$$$ |
+$$ |  $$ |$$  __$$ |$$ |      $$ |  $$ |$$ | $$ | $$ |$$  __$$ |$$ |      $$   ____|
+$$ |  $$ |\$$$$$$$ |$$ |      \$$$$$$$ |\$$$$$\$$$$  |\$$$$$$$ |$$ |      \$$$$$$$\ 
+\__|  \__| \_______|\__|       \_______| \_____\____/  \_______|\__|       \_______|*/
+
 brain Brain;
 controller Controller1 = controller(primary);
+inertial Motion = inertial(PORT3);
 
 motor MotorFL = motor(PORT14, ratio18_1, true);
 motor MotorRL = motor(PORT16, ratio18_1, true);
@@ -39,9 +68,30 @@ motor MotorRR = motor(PORT1, ratio18_1, false);
 
 motor Intake = motor(PORT2, ratio18_1, false);
 
-inertial Motion = inertial(PORT3);
-
 digital_out Wings = digital_out(Brain.ThreeWirePort.A);
+
+/*
+ $$$$$$\             $$\     $$\     $$\                               
+$$  __$$\            $$ |    $$ |    \__|                              
+$$ /  \__| $$$$$$\ $$$$$$\ $$$$$$\   $$\ $$$$$$$\   $$$$$$\   $$$$$$$\ 
+\$$$$$$\  $$  __$$\\_$$  _|\_$$  _|  $$ |$$  __$$\ $$  __$$\ $$  _____|
+ \____$$\ $$$$$$$$ | $$ |    $$ |    $$ |$$ |  $$ |$$ /  $$ |\$$$$$$\  
+$$\   $$ |$$   ____| $$ |$$\ $$ |$$\ $$ |$$ |  $$ |$$ |  $$ | \____$$\ 
+\$$$$$$  |\$$$$$$$\  \$$$$  |\$$$$  |$$ |$$ |  $$ |\$$$$$$$ |$$$$$$$  |
+ \______/  \_______|  \____/  \____/ \__|\__|  \__| \____$$ |\_______/ 
+                                                   $$\   $$ |          
+                                                   \$$$$$$  |          
+                                                    \_____*/
+  // Auton
+  const int DRIVE_VELOCITY = 20;
+  const int TURN_VELOCITY = 25;
+
+  // Driver Control
+  const double DCspeedMult = .6;
+  const double DCspinMult = .3;
+  const int DRIVE_TORQUE = 80;
+  const int INTAKE_TORQUE = 100;
+  const int INTAKE_SPEED = 50;
 
 // Enumerations
 enum directional {REVERSE = -1, FORWARD = 1};
@@ -102,11 +152,11 @@ public:
     CompetitionButton.menu = COMPETITION;
 
     // Driver Control Button
-    DCButton.text = "Driver Control";
+    DCButton.text = "   Driver Control  ";
     DCButton.menu = DRIVER_CONTROL;
 
     // Autonomous Button
-    AutonButton.text = "Autonomous";
+    AutonButton.text = "   Autonomous   ";
     AutonButton.menu = AUTONOMOUS;
 
     menuButtons.reserve(3);
@@ -130,18 +180,6 @@ private:
   }
 };
 
-// Settings
-
-  // Auton
-  const int DRIVE_VELOCITY = 20;
-  const int TURN_VELOCITY = 25;
-
-  // Driver Control
-  const double DCspeedMult = .6;
-  const double DCspinMult = .3;
-  const int DRIVE_TORQUE = 80;
-  const int INTAKE_TORQUE = 100;
-  const int INTAKE_SPEED = 50;
 
 // Global Variables
 double leftSpeed = 0;
@@ -155,8 +193,6 @@ void autonomous();
 void driverControl();
 void drive(directional direction, double dist);
 void turn(turnMethod method, int angle);
-
-// MAIN FUNCTION HERE
 
 int main() {
   Motion.calibrate();
@@ -190,7 +226,17 @@ int main() {
   }
 }
 
-void autonomous(void) {
+/*
+ $$$$$$\              $$\                                                                               
+$$  __$$\             $$ |                                                                              
+$$ /  $$ |$$\   $$\ $$$$$$\    $$$$$$\  $$$$$$$\   $$$$$$\  $$$$$$\$$$$\   $$$$$$\  $$\   $$\  $$$$$$$\ 
+$$$$$$$$ |$$ |  $$ |\_$$  _|  $$  __$$\ $$  __$$\ $$  __$$\ $$  _$$  _$$\ $$  __$$\ $$ |  $$ |$$  _____|
+$$  __$$ |$$ |  $$ |  $$ |    $$ /  $$ |$$ |  $$ |$$ /  $$ |$$ / $$ / $$ |$$ /  $$ |$$ |  $$ |\$$$$$$\  
+$$ |  $$ |$$ |  $$ |  $$ |$$\ $$ |  $$ |$$ |  $$ |$$ |  $$ |$$ | $$ | $$ |$$ |  $$ |$$ |  $$ | \____$$\ 
+$$ |  $$ |\$$$$$$  |  \$$$$  |\$$$$$$  |$$ |  $$ |\$$$$$$  |$$ | $$ | $$ |\$$$$$$  |\$$$$$$  |$$$$$$$  |
+\__|  \__| \______/    \____/  \______/ \__|  \__| \______/ \__| \__| \__| \______/  \______/ \______*/
+
+void autonomous() {
   drive(FORWARD, 2);
   Wings.set(true);
   turn(FOR, 90);
@@ -261,7 +307,25 @@ void turn(turnMethod method, int angle) {
   wait(.2, sec);
 }
 
-void driverControl(void) {
+/*
+$$$$$$$\            $$\                                
+$$  __$$\           \__|                               
+$$ |  $$ | $$$$$$\  $$\ $$\    $$\  $$$$$$\   $$$$$$\  
+$$ |  $$ |$$  __$$\ $$ |\$$\  $$  |$$  __$$\ $$  __$$\ 
+$$ |  $$ |$$ |  \__|$$ | \$$\$$  / $$$$$$$$ |$$ |  \__|
+$$ |  $$ |$$ |      $$ |  \$$$  /  $$   ____|$$ |      
+$$$$$$$  |$$ |      $$ |   \$  /   \$$$$$$$\ $$ |      
+\_______/ \__|      \__|    \_/     \_______|\__|
+ $$$$$$\                       $$\                         $$\ 
+$$  __$$\                      $$ |                        $$ |
+$$ /  \__| $$$$$$\  $$$$$$$\ $$$$$$\    $$$$$$\   $$$$$$\  $$ |
+$$ |      $$  __$$\ $$  __$$\\_$$  _|  $$  __$$\ $$  __$$\ $$ |
+$$ |      $$ /  $$ |$$ |  $$ | $$ |    $$ |  \__|$$ /  $$ |$$ |
+$$ |  $$\ $$ |  $$ |$$ |  $$ | $$ |$$\ $$ |      $$ |  $$ |$$ |
+\$$$$$$  |\$$$$$$  |$$ |  $$ | \$$$$  |$$ |      \$$$$$$  |$$ |
+ \______/  \______/ \__|  \__|  \____/ \__|       \______/ \__| */
+
+void driverControl() {
   // Setting Drive Motor Settings
   MotorFR.setMaxTorque(DRIVE_TORQUE, percent);
   MotorRR.setMaxTorque(DRIVE_TORQUE, percent);
@@ -275,8 +339,8 @@ void driverControl(void) {
   while (true) {
     // Drive Control
     // Setting variables
-    leftSpeed = (Controller1.Axis3.position()*DCspeedMult) + (Controller1.Axis1.position()*DCspinMult);
-    rightSpeed = (Controller1.Axis3.position()*DCspeedMult) - (Controller1.Axis1.position()*DCspinMult);
+    leftSpeed = (Controller1.A_FORWARD.position()*DCspeedMult) + (Controller1.A_TURN.position()*DCspinMult);
+    rightSpeed = (Controller1.A_FORWARD.position()*DCspeedMult) - (Controller1.A_TURN.position()*DCspinMult);
     // Applying Movement
     if (fabs(leftSpeed)+fabs(rightSpeed) > 5) {
       leftSide(leftSpeed, percent);
@@ -287,15 +351,15 @@ void driverControl(void) {
     }
 
     // Wing Control
-    if (Controller1.ButtonR1.pressing()) {
+    if (Controller1.D_WINGS_ENABLE.pressing()) {
       Wings.set(true);
-    } else if (Controller1.ButtonL1.pressing()) {
+    } else if (Controller1.D_WINGS_DISABLE.pressing()) {
       Wings.set(false);
     }
 
-    if (Controller1.ButtonR2.pressing() && !Controller1.ButtonL2.pressing()) {
+    if (Controller1.D_INTAKE_FORWARD.pressing() && !Controller1.D_INTAKE_REVERSE.pressing()) {
       Intake.spin(forward);
-    } else if (Controller1.ButtonL2.pressing() && !Controller1.ButtonR2.pressing()) {
+    } else if (Controller1.D_INTAKE_REVERSE.pressing() && !Controller1.D_INTAKE_FORWARD.pressing()) {
       Intake.spin(reverse);
     } else {
       Intake.stop();
