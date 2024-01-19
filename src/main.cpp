@@ -195,6 +195,10 @@ double barrierLBasePos;
 double barrierRBasePos;
 double barrierLUpPos;
 double barrierRUpPos;
+bool barrierState = DOWN;
+bool barrierLastState;
+
+char* DebugMessage;
 
 // Thread callbacks
 void temperatureMonitor();
@@ -204,7 +208,7 @@ void autonomous();
 void driverControl();
 void drive(directional direction, double dist);
 void turn(turnMethod method, int angle);
-void barrier(positional state);
+void barrierControlThread();
 
 int main() {
   Motion.calibrate();
@@ -240,6 +244,7 @@ int main() {
     thread TMON = thread(temperatureMonitor);
   } else if (selectedMenu == DRIVER_CONTROL) {
     while (Motion.isCalibrating()) {wait(5, msec);}
+    thread BarrierControl = thread(barrierControlThread);
     thread TMON = thread(temperatureMonitor);
     driverControl();
   } else if (selectedMenu == AUTONOMOUS) {
@@ -334,26 +339,36 @@ void turn(turnMethod method, int angle) {
   wait(.2, sec);
 }
 
-void barrier(positional state) {
-  switch (state) {
-    case UP:
-      BarrierL.spin(forward);
-      BarrierR.spin(forward);
-      while (BarrierL.position(deg) < barrierLUpPos || BarrierR.position(deg) < barrierRUpPos) {
-        wait(5, msec);
-      }
-      BarrierL.stop(hold);
-      BarrierR.stop(hold);
-      break;
-    case DOWN:
-      BarrierL.spin(reverse);
-      BarrierR.spin(reverse);
-      while (BarrierL.position(deg) > barrierLBasePos || BarrierR.position(deg) > barrierRBasePos) {
-        wait(5, msec);
-      }
-      BarrierL.stop(brake);
-      BarrierR.stop(brake);
-      break;
+void barrierControlThread() {
+  while (true) {
+    if (barrierLastState == barrierState) {
+      wait(5, msec);
+      continue;
+    }
+    switch (barrierState) {
+      case UP:
+        barrierLastState = barrierState;
+        BarrierL.spin(forward);
+        BarrierR.spin(forward);
+        while (BarrierL.position(deg) < barrierLUpPos || BarrierR.position(deg) < barrierRUpPos) {
+          wait(5, msec);
+        }
+        BarrierL.stop(hold);
+        BarrierR.stop(hold);
+        break;
+      case DOWN:
+        barrierLastState = barrierState;
+        BarrierL.spin(reverse);
+        BarrierR.spin(reverse);
+        while (BarrierL.position(deg) > barrierLBasePos || BarrierR.position(deg) > barrierRBasePos) {
+          wait(5, msec);
+        }
+        BarrierL.stop(brake);
+        BarrierR.stop(brake);
+        break;
+    }
+
+    wait(5, msec);
   }
 }
 
@@ -413,8 +428,8 @@ void driverControl() {
 
     // Barrier Control
     
-    if (Controller1.D_BARRIER_UP.pressing() && !Controller1.D_BARRIER_DOWN.pressing()) barrier(UP);
-    if (Controller1.D_BARRIER_DOWN.pressing() && !Controller1.D_BARRIER_UP.pressing()) barrier(DOWN);
+    if (Controller1.D_BARRIER_UP.pressing() && !Controller1.D_BARRIER_DOWN.pressing()) barrierState = UP;
+    if (Controller1.D_BARRIER_DOWN.pressing() && !Controller1.D_BARRIER_UP.pressing()) barrierState = DOWN;
   }
 }
 
