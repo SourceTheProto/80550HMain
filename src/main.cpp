@@ -214,6 +214,10 @@ int main() {
   Brain.Screen.setFillColor(red);
   Brain.Screen.print("Calibrating...");
 
+  // Setting Motor Speeds
+  Intake.setVelocity(INTAKE_SPEED, percent);
+  Intake.setMaxTorque(INTAKE_TORQUE, percent);
+
   // Setting Barrier settings and variables
   BarrierR.setVelocity(BARRIER_SPEED, percent);
   BarrierR.setMaxTorque(BARRIER_TORQUE, percent);
@@ -260,11 +264,11 @@ $$ |  $$ |\$$$$$$  |  \$$$$  |\$$$$$$  |$$ |  $$ |\$$$$$$  |$$ | $$ | $$ |\$$$$$
 \__|  \__| \______/    \____/  \______/ \__|  \__| \______/ \__| \__| \__| \______/  \______/ \______*/
 
 void autonomous() {
+  Intake.spin(forward);
   drive(FORWARD, 2);
-  Wings.set(true);
   turn(FOR, 90);
+  Intake.spin(reverse);
   drive(FORWARD, .25);
-  Wings.set(false);
 }
 
 void drive(directional direction, double dist)
@@ -377,10 +381,6 @@ void driverControl() {
   MotorRR.setMaxTorque(DRIVE_TORQUE, percent);
   MotorFL.setMaxTorque(DRIVE_TORQUE, percent);
   MotorRL.setMaxTorque(DRIVE_TORQUE, percent);
-
-  // Setting Intake Motor Settings
-  Intake.setMaxTorque(INTAKE_TORQUE, percent);
-  Intake.setVelocity(INTAKE_SPEED, percent);
 
   while (true) {
     // Drive Control
