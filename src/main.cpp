@@ -41,6 +41,8 @@ $$$$$$$  |$$ |$$ |  $$ |\$$$$$$$ |$$ |$$ |  $$ |\$$$$$$$ |$$$$$$$  |
 #define D_WINGS_DISABLE ButtonL1
 #define D_INTAKE_FORWARD ButtonR2
 #define D_INTAKE_REVERSE ButtonL2
+#define D_BARRIER_UP ButtonUp
+#define D_BARRIER_DOWN ButtonDown
 
 #include "vex.h"
 #include <vector>
@@ -68,6 +70,9 @@ motor MotorRR = motor(PORT1, ratio18_1, false);
 
 motor Intake = motor(PORT2, ratio18_1, false);
 
+motor BarrierR = motor(PORT4, ratio18_1, true);
+motor BarrierL = motor(PORT19, ratio18_1, false);
+
 digital_out Wings = digital_out(Brain.ThreeWirePort.A);
 
 /*
@@ -92,9 +97,12 @@ $$\   $$ |$$   ____| $$ |$$\ $$ |$$\ $$ |$$ |  $$ |$$ |  $$ | \____$$\
   const int DRIVE_TORQUE = 80;
   const int INTAKE_TORQUE = 100;
   const int INTAKE_SPEED = 50;
+  const int BARRIER_TORQUE = 100;
+  const int BARRIER_SPEED = 50;
 
 // Enumerations
 enum directional {REVERSE = -1, FORWARD = 1};
+enum positional {UP = 1, DOWN = 0};
 enum turnMethod {FOR, TO};
 enum menuLink {NONE, COMPETITION, DRIVER_CONTROL, AUTONOMOUS};
 
@@ -103,7 +111,6 @@ const int TILE_LENGTH = 24;
 const int WHEEL_DIAMETER = 4;
 const int SCREENX = 480;
 const int SCREENY = 272;
-const int C_SCREENX = 20;
 const float pi = 3.141592;
 
 class MainMenu {
@@ -184,6 +191,10 @@ private:
 // Global Variables
 double leftSpeed = 0;
 double rightSpeed = 0;
+double barrierLBasePos;
+double barrierRBasePos;
+double barrierLUpPos;
+double barrierRUpPos;
 
 // Thread callbacks
 void temperatureMonitor();
@@ -193,6 +204,7 @@ void autonomous();
 void driverControl();
 void drive(directional direction, double dist);
 void turn(turnMethod method, int angle);
+void barrier(positional state);
 
 int main() {
   Motion.calibrate();
@@ -201,6 +213,17 @@ int main() {
   Brain.Screen.setPenColor(white);
   Brain.Screen.setFillColor(red);
   Brain.Screen.print("Calibrating...");
+
+  // Setting Barrier settings and variables
+  BarrierR.setVelocity(BARRIER_SPEED, percent);
+  BarrierR.setMaxTorque(BARRIER_TORQUE, percent);
+  BarrierL.setVelocity(BARRIER_SPEED, percent);
+  BarrierL.setMaxTorque(BARRIER_TORQUE, percent);
+
+  barrierLBasePos = BarrierL.position(deg);
+  barrierRBasePos = BarrierR.position(deg);
+  barrierLUpPos = barrierLBasePos + 88;
+  barrierRUpPos = barrierRBasePos + 88;
 
   MainMenu StartMenu;
   
@@ -307,6 +330,29 @@ void turn(turnMethod method, int angle) {
   wait(.2, sec);
 }
 
+void barrier(positional state) {
+  switch (state) {
+    case UP:
+      BarrierL.spin(forward);
+      BarrierR.spin(forward);
+      while (BarrierL.position(deg) < barrierLUpPos || BarrierR.position(deg) < barrierRUpPos) {
+        wait(5, msec);
+      }
+      BarrierL.stop(hold);
+      BarrierR.stop(hold);
+      break;
+    case DOWN:
+      BarrierL.spin(reverse);
+      BarrierR.spin(reverse);
+      while (BarrierL.position(deg) > barrierLBasePos || BarrierR.position(deg) > barrierRBasePos) {
+        wait(5, msec);
+      }
+      BarrierL.stop(brake);
+      BarrierR.stop(brake);
+      break;
+  }
+}
+
 /*
 $$$$$$$\            $$\                                
 $$  __$$\           \__|                               
@@ -364,6 +410,11 @@ void driverControl() {
     } else {
       Intake.stop();
     }
+
+    // Barrier Control
+    
+    if (Controller1.D_BARRIER_UP.pressing() && !Controller1.D_BARRIER_DOWN.pressing()) barrier(UP);
+    if (Controller1.D_BARRIER_DOWN.pressing() && !Controller1.D_BARRIER_UP.pressing()) barrier(DOWN);
   }
 }
 
