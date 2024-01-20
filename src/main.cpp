@@ -94,11 +94,12 @@ $$\   $$ |$$   ____| $$ |$$\ $$ |$$\ $$ |$$ |  $$ |$$ |  $$ | \____$$\
   // Driver Control
   const double DCspeedMult = .6;
   const double DCspinMult = .3;
-  const int DRIVE_TORQUE = 80;
-  const int INTAKE_TORQUE = 100;
-  const int INTAKE_SPEED = 50;
-  const int BARRIER_TORQUE = 100;
-  const int BARRIER_SPEED = 50;
+  #define DRIVE_TORQUE 80
+  #define INTAKE_TORQUE 100
+  #define INTAKE_SPEED 50
+  #define BARRIER_TORQUE 100
+  #define BARRIER_SPEED 50
+  #define DEBUG_TIMEOUT_SECONDS 5
 
 // Enumerations
 enum directional {REVERSE = -1, FORWARD = 1};
@@ -107,10 +108,8 @@ enum turnMethod {FOR, TO};
 enum menuLink {NONE, COMPETITION, DRIVER_CONTROL, AUTONOMOUS};
 
 // Constants
-const int TILE_LENGTH = 24;
-const int WHEEL_DIAMETER = 4;
-const int SCREENX = 480;
-const int SCREENY = 272;
+#define TILE_LENGTH 24
+#define WHEEL_DIAMETER 4
 const float pi = 3.141592;
 
 class MainMenu {
@@ -191,6 +190,7 @@ private:
 // Global Variables
 double leftSpeed = 0;
 double rightSpeed = 0;
+
 double barrierLBasePos;
 double barrierRBasePos;
 double barrierLUpPos;
@@ -198,26 +198,22 @@ double barrierRUpPos;
 bool barrierState = DOWN;
 bool barrierLastState;
 
-char* DebugMessage;
+std::vector<char*> debugBuffer;
+double debugTimer = 0;
 
 // Thread callbacks
-void temperatureMonitor();
+void DisplayManager();
+void barrierControlThread();
 
 // Function declarations
 void autonomous();
 void driverControl();
 void drive(directional direction, double dist);
 void turn(turnMethod method, int angle);
-void barrierControlThread();
+void calibrate();
+void printDebug(char* message);
 
 int main() {
-  Motion.calibrate();
-  Brain.Screen.clearScreen(red);
-  Brain.Screen.setFont(mono40);
-  Brain.Screen.setPenColor(white);
-  Brain.Screen.setFillColor(red);
-  Brain.Screen.print("Calibrating...");
-
   // Setting Motor Speeds
   Intake.setVelocity(INTAKE_SPEED, percent);
   Intake.setMaxTorque(INTAKE_TORQUE, percent);
@@ -233,23 +229,24 @@ int main() {
   barrierLUpPos = barrierLBasePos + 88;
   barrierRUpPos = barrierRBasePos + 88;
 
+  thread Calibrator = thread(calibrate);
+
   MainMenu StartMenu;
-  
   menuLink selectedMenu = StartMenu.run();
 
   if (selectedMenu == COMPETITION) {
-    Competition.autonomous(autonomous);
-    Competition.drivercontrol(driverControl);
-    while (Motion.isCalibrating()) {wait(5, msec);}
-    thread TMON = thread(temperatureMonitor);
+      Competition.autonomous(autonomous);
+      Competition.drivercontrol(driverControl);
+	  Calibrator.join();
+      thread DM = thread(DisplayManager);
   } else if (selectedMenu == DRIVER_CONTROL) {
-    while (Motion.isCalibrating()) {wait(5, msec);}
-    thread BarrierControl = thread(barrierControlThread);
-    thread TMON = thread(temperatureMonitor);
-    driverControl();
+      thread BarrierControl = thread(barrierControlThread);
+	  Calibrator.join();
+      thread DM = thread(DisplayManager);
+      driverControl();
   } else if (selectedMenu == AUTONOMOUS) {
-      while (Motion.isCalibrating()) {wait(5, msec);}
-      thread TMON = thread(temperatureMonitor);
+	  Calibrator.join();
+      thread DM = thread(DisplayManager);
       autonomous();
   }
 
@@ -278,6 +275,7 @@ void autonomous() {
 
 void drive(directional direction, double dist)
 {
+  printDebug("Starting Drive Function...");
   double initialPosition = MotorFL.position(rev);
   double initialHeading = Motion.heading();
 
@@ -308,9 +306,11 @@ void drive(directional direction, double dist)
   stopDriveMotors(hold);
   turn(TO, initialHeading);
   wait(.2, sec);
+  printDebug("Finished Driving.");
 }
 
 void turn(turnMethod method, int angle) {
+  printDebug("Starting Turn...");
   double desiredHeading;
   switch (method) {
     case FOR:
@@ -329,14 +329,17 @@ void turn(turnMethod method, int angle) {
   rightSide(-1*TURN_VELOCITY, percent);
   spinDriveMotors(forward);
 
+  printDebug("  entering loop...");
   while ((double)Motion.heading() <= desiredHeading)
   {
     double logDifference = log((desiredHeading - (Motion.heading()))+1);
     leftSide((TURN_VELOCITY/10) * logDifference, percent);
     rightSide(-1*(TURN_VELOCITY/10) * logDifference, percent);
   }
+  printDebug("  exiting loop.");
   stopDriveMotors(hold);
   wait(.2, sec);
+  printDebug("Finished Turning.");
 }
 
 void barrierControlThread() {
@@ -433,29 +436,62 @@ void driverControl() {
   }
 }
 
-void temperatureMonitor() {
+void printDebug(char* message) {
+  debugBuffer.insert(debugBuffer.begin(), message);
+  debugTimer = DEBUG_TIMEOUT_SECONDS;
+}
+
+void DisplayManager() {
   double motorTempAvg = 0;
-  Brain.Screen.clearScreen();
-  Brain.Screen.setFillColor(black);
-  Brain.Screen.setPenColor(black);
-  Brain.Screen.drawRectangle(0, 0, SCREENX, SCREENY);
+  
   while (true) {
-    motorTempAvg = (MotorFR.temperature(percent) + MotorFL.temperature(percent)
-                    + MotorRR.temperature(percent) + MotorRL.temperature(percent)) / 4;
-    
-    Brain.Screen.setFont(mono40);
+    Brain.Screen.clearScreen();
+    while (debugTimer == 0) {
+      motorTempAvg = (MotorFR.temperature(percent) + MotorFL.temperature(percent)
+                      + MotorRR.temperature(percent) + MotorRL.temperature(percent)) / 4;
+      
+      Brain.Screen.setFont(mono40);
+      Brain.Screen.setPenColor(white);
+
+      // Printing all motor temperatures & average
+      Brain.Screen.setCursor(1, 1);
+      Brain.Screen.print("%d", (int)(MotorFR.temperature(percent)));
+      Brain.Screen.setCursor(7, 1);
+      Brain.Screen.print("%d", (int)(MotorFL.temperature(percent)));
+      Brain.Screen.setCursor(1, 23);
+      Brain.Screen.print("%d", (int)(MotorRR.temperature(percent)));
+      Brain.Screen.setCursor(7, 23);
+      Brain.Screen.print("%d", (int)(MotorRL.temperature(percent)));
+      Brain.Screen.setCursor(3, 7);
+      Brain.Screen.print("MotorAVG: %d", (int)(motorTempAvg));
+      wait(100, msec);
+    }
+
+    Brain.Screen.clearScreen(black);
+    Brain.Screen.setFont(mono20);
     Brain.Screen.setPenColor(white);
 
-    // Printing all motor temperatures & average
-    Brain.Screen.setCursor(1, 1);
-    Brain.Screen.print("%d", (int)(MotorFR.temperature(percent)));
-    Brain.Screen.setCursor(7, 1);
-    Brain.Screen.print("%d", (int)(MotorFL.temperature(percent)));
-    Brain.Screen.setCursor(1, 23);
-    Brain.Screen.print("%d", (int)(MotorRR.temperature(percent)));
-    Brain.Screen.setCursor(7, 23);
-    Brain.Screen.print("%d", (int)(MotorRL.temperature(percent)));
-    Brain.Screen.setCursor(3, 7);
-    Brain.Screen.print("MotorAVG: %d", (int)(motorTempAvg));
+    while (debugBuffer.size() > 15) debugBuffer.pop_back();
+    
+    for (int i = 1; i <= debugBuffer.size(); i++) {
+      Brain.Screen.setCursor(i, 1);
+      Brain.Screen.print(debugBuffer[i-1]);
+    }
+	debugTimer -= 0.2;
+	while (debugTimer != 0 && debugTimer != DEBUG_TIMEOUT_SECONDS) {
+		debugTimer -= 0.2;
+    if (debugTimer < 0) debugTimer = 0;
+    wait(200, msec);
+	}
   }
+}
+
+void calibrate() {
+  Motion.calibrate();
+  Brain.Screen.clearScreen(orange);
+  Brain.Screen.setFont(mono40);
+  Brain.Screen.setPenColor(white);
+  Brain.Screen.print("Calibrating...");
+  while (Motion.isCalibrating()) {wait(5, msec);}
+  Brain.Screen.clearScreen(black);
 }
