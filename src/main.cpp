@@ -99,7 +99,7 @@ $$\   $$ |$$   ____| $$ |$$\ $$ |$$\ $$ |$$ |  $$ |$$ |  $$ | \____$$\
   #define INTAKE_SPEED 50
   #define BARRIER_TORQUE 100
   #define BARRIER_SPEED 50
-  #define DEBUG_TIMEOUT_SECONDS 5
+  #define DEBUG_TIMEOUT_SECONDS 10
 
 // Enumerations
 enum directional {REVERSE = -1, FORWARD = 1};
@@ -223,6 +223,8 @@ int main() {
   BarrierR.setMaxTorque(BARRIER_TORQUE, percent);
   BarrierL.setVelocity(BARRIER_SPEED, percent);
   BarrierL.setMaxTorque(BARRIER_TORQUE, percent);
+  BarrierL.stop(hold);
+  BarrierR.stop(hold);
 
   barrierLBasePos = BarrierL.position(deg);
   barrierRBasePos = BarrierR.position(deg);
@@ -305,8 +307,8 @@ void drive(directional direction, double dist)
   }
   stopDriveMotors(hold);
   turn(TO, initialHeading);
-  wait(.2, sec);
   printDebug("Finished Driving.");
+  wait(.2, sec);
 }
 
 void turn(turnMethod method, int angle) {
@@ -338,8 +340,8 @@ void turn(turnMethod method, int angle) {
   }
   printDebug("  exiting loop.");
   stopDriveMotors(hold);
-  wait(.2, sec);
   printDebug("Finished Turning.");
+  wait(.2, sec);
 }
 
 void barrierControlThread() {
@@ -366,8 +368,8 @@ void barrierControlThread() {
         while (BarrierL.position(deg) > barrierLBasePos || BarrierR.position(deg) > barrierRBasePos) {
           wait(5, msec);
         }
-        BarrierL.stop(brake);
-        BarrierR.stop(brake);
+        BarrierL.stop(hold);
+        BarrierR.stop(hold);
         break;
     }
 
