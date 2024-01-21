@@ -105,20 +105,20 @@ $$\   $$ |$$   ____| $$ |$$\ $$ |$$\ $$ |$$ |  $$ |$$ |  $$ | \____$$\
 enum directional {REVERSE = -1, FORWARD = 1};
 enum positional {UP = 1, DOWN = 0};
 enum turnMethod {FOR, TO};
-enum menuLink {NONE, COMPETITION, DRIVER_CONTROL, AUTONOMOUS};
+enum menuLink {NONE, COMPETITION, DRIVER_CONTROL, AUTONOMOUS, ENABLED, DISABLED};
 
 // Constants
 #define TILE_LENGTH 24
 #define WHEEL_DIAMETER 4
 const float pi = 3.141592;
 
+struct menuButton {
+  char* text;
+  menuLink menu = NONE;
+};
+
 class MainMenu {
 public:
-
-  struct menuButton {
-    char* text;
-    menuLink menu = NONE;
-  };
 
   menuLink run() {
     int buttonIndex = 0;
@@ -135,12 +135,12 @@ public:
       {
         if (Controller1.ButtonLeft.pressing()) {
           buttonIndex--;
-          if (buttonIndex < 0) {buttonIndex = 2;}
+          if (buttonIndex < 0) {buttonIndex = (menuButtons.size()-1);}
           while (Controller1.ButtonLeft.pressing()) {wait(5, msec);}
           break;
         } else if (Controller1.ButtonRight.pressing()) {
           buttonIndex++;
-          if (buttonIndex > 2) {buttonIndex = 0;}
+          if (buttonIndex > menuButtons.size()-1) {buttonIndex = 0;}
           while (Controller1.ButtonRight.pressing()) {wait(5, msec);}
           break;
         } else if (Controller1.ButtonA.pressing()) {
@@ -186,6 +186,68 @@ private:
   }
 };
 
+class AutonSelector {
+public:
+
+  menuLink run() {
+    int buttonIndex = 0;
+    
+    while (true)
+    {
+      clearDisplay();
+      Controller1.Screen.setCursor(4, 1);
+      Controller1.Screen.print("< ");
+      Controller1.Screen.print(menuButtons[buttonIndex].text);
+      Controller1.Screen.print(" >");
+      
+      while (true)
+      {
+        if (Controller1.ButtonLeft.pressing()) {
+          buttonIndex--;
+          if (buttonIndex < 0) {buttonIndex = (menuButtons.size()-1);}
+          while (Controller1.ButtonLeft.pressing()) {wait(5, msec);}
+          break;
+        } else if (Controller1.ButtonRight.pressing()) {
+          buttonIndex++;
+          if (buttonIndex > menuButtons.size()-1) {buttonIndex = 0;}
+          while (Controller1.ButtonRight.pressing()) {wait(5, msec);}
+          break;
+        } else if (Controller1.ButtonA.pressing()) {
+          while (Controller1.ButtonA.pressing()) {wait(5, msec);}
+          clearDisplay();
+          return menuButtons[buttonIndex].menu;
+        }
+      }
+    }
+  }
+
+  AutonSelector() {
+    // Competition Button
+    EnabledButton.text = "  Auton Enabled  ";
+    EnabledButton.menu = ENABLED;
+
+    // Driver Control Button
+    DisabledButton.text = "  Auton Disabled ";
+    DisabledButton.menu = DISABLED;
+
+    menuButtons.reserve(2);
+    menuButtons.push_back(EnabledButton);
+    menuButtons.push_back(DisabledButton);
+  }
+
+private:
+
+  std::vector<menuButton> menuButtons;
+
+  // Buttons
+  menuButton EnabledButton;
+  menuButton DisabledButton;
+
+  void clearDisplay() {
+    Controller1.Screen.setCursor(4, 1);
+    Controller1.Screen.print("                            ");
+  }
+};
 
 // Global Variables
 double leftSpeed = 0;
@@ -197,6 +259,8 @@ double barrierLUpPos;
 double barrierRUpPos;
 bool barrierState = DOWN;
 bool barrierLastState;
+
+bool autonEnabled = true;
 
 std::vector<char*> debugBuffer;
 double debugTimer = 0;
@@ -239,6 +303,12 @@ int main() {
   if (selectedMenu == COMPETITION) {
     Competition.autonomous(autonomous);
     Competition.drivercontrol(driverControl);
+
+    AutonSelector selector;
+    menuLink selectedAuton = selector.run();
+    if (selectedAuton == ENABLED) autonEnabled = true;
+    if (selectedAuton == DISABLED) autonEnabled = false;
+
 	  Calibrator.join();
     thread BarrierControl = thread(barrierControlThread);
     thread DM = thread(DisplayManager);
@@ -269,6 +339,8 @@ $$ |  $$ |\$$$$$$  |  \$$$$  |\$$$$$$  |$$ |  $$ |\$$$$$$  |$$ | $$ | $$ |\$$$$$
 \__|  \__| \______/    \____/  \______/ \__|  \__| \______/ \__| \__| \__| \______/  \______/ \______*/
 
 void autonomous() {
+  if (!autonEnabled) return;
+
   Intake.spin(forward);
   drive(FORWARD, 2);
   turn(FOR, 90);
