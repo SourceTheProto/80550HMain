@@ -277,7 +277,6 @@ void autonomous() {
 
 void drive(directional direction, double dist)
 {
-  printDebug("Starting Drive Function...");
   double initialPosition = MotorFL.position(rev);
   double initialHeading = Motion.heading();
 
@@ -307,21 +306,16 @@ void drive(directional direction, double dist)
   }
   stopDriveMotors(hold);
   turn(TO, initialHeading);
-  printDebug("Finished Driving.");
   wait(.2, sec);
 }
 
 void turn(turnMethod method, int angle) {
-  printDebug("Starting Turn...");
   double desiredHeading;
   switch (method) {
     case FOR:
       desiredHeading = Motion.heading() + angle;
-      while (desiredHeading > 360) {
-        desiredHeading -= 360;
-      }
+      while (desiredHeading > 360) desiredHeading -= 360;
       break;
-    
     case TO:
       desiredHeading = angle;
       break;
@@ -331,16 +325,13 @@ void turn(turnMethod method, int angle) {
   rightSide(-1*TURN_VELOCITY, percent);
   spinDriveMotors(forward);
 
-  printDebug("  entering loop...");
   while ((double)Motion.heading() <= desiredHeading)
   {
-    double logDifference = log((desiredHeading - (Motion.heading()))+1);
+    double logDifference = log((desiredHeading - (Motion.heading())));
     leftSide((TURN_VELOCITY/10) * logDifference, percent);
-    rightSide(-1*(TURN_VELOCITY/10) * logDifference, percent);
+    rightSide((-1*(TURN_VELOCITY/10) * logDifference), percent);
   }
-  printDebug("  exiting loop.");
   stopDriveMotors(hold);
-  printDebug("Finished Turning.");
   wait(.2, sec);
 }
 
@@ -355,7 +346,7 @@ void barrierControlThread() {
         barrierLastState = barrierState;
         BarrierL.spin(forward);
         BarrierR.spin(forward);
-        while (BarrierL.position(deg) < barrierLUpPos || BarrierR.position(deg) < barrierRUpPos) {
+        while ((BarrierL.position(deg) < barrierLUpPos || BarrierR.position(deg) < barrierRUpPos) && !Controller1.D_BARRIER_DOWN.pressing()) {
           wait(5, msec);
         }
         BarrierL.stop(hold);
@@ -365,7 +356,7 @@ void barrierControlThread() {
         barrierLastState = barrierState;
         BarrierL.spin(reverse);
         BarrierR.spin(reverse);
-        while (BarrierL.position(deg) > barrierLBasePos || BarrierR.position(deg) > barrierRBasePos) {
+        while ((BarrierL.position(deg) > barrierLBasePos || BarrierR.position(deg) > barrierRBasePos) && !Controller1.D_BARRIER_UP.pressing()) {
           wait(5, msec);
         }
         BarrierL.stop(hold);
@@ -432,7 +423,6 @@ void driverControl() {
     }
 
     // Barrier Control
-    
     if (Controller1.D_BARRIER_UP.pressing() && !Controller1.D_BARRIER_DOWN.pressing()) barrierState = UP;
     if (Controller1.D_BARRIER_DOWN.pressing() && !Controller1.D_BARRIER_UP.pressing()) barrierState = DOWN;
   }
@@ -493,6 +483,7 @@ void calibrate() {
   Brain.Screen.clearScreen(orange);
   Brain.Screen.setFont(mono40);
   Brain.Screen.setPenColor(white);
+  Brain.Screen.setFillColor(orange);
   Brain.Screen.print("Calibrating...");
   while (Motion.isCalibrating()) {wait(5, msec);}
   Brain.Screen.clearScreen(black);
