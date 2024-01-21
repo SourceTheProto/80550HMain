@@ -237,19 +237,20 @@ int main() {
   menuLink selectedMenu = StartMenu.run();
 
   if (selectedMenu == COMPETITION) {
-      Competition.autonomous(autonomous);
-      Competition.drivercontrol(driverControl);
+    Competition.autonomous(autonomous);
+    Competition.drivercontrol(driverControl);
 	  Calibrator.join();
-      thread DM = thread(DisplayManager);
+    thread BarrierControl = thread(barrierControlThread);
+    thread DM = thread(DisplayManager);
   } else if (selectedMenu == DRIVER_CONTROL) {
-      thread BarrierControl = thread(barrierControlThread);
-	  Calibrator.join();
-      thread DM = thread(DisplayManager);
-      driverControl();
+    thread BarrierControl = thread(barrierControlThread);
+    Calibrator.join();
+    thread DM = thread(DisplayManager);
+    driverControl();
   } else if (selectedMenu == AUTONOMOUS) {
 	  Calibrator.join();
-      thread DM = thread(DisplayManager);
-      autonomous();
+    thread DM = thread(DisplayManager);
+    autonomous();
   }
 
   while (true) {
@@ -257,8 +258,8 @@ int main() {
   }
 }
 
-/*
- $$$$$$\              $$\                                                                               
+
+/*$$$$$\              $$\                                                                               
 $$  __$$\             $$ |                                                                              
 $$ /  $$ |$$\   $$\ $$$$$$\    $$$$$$\  $$$$$$$\   $$$$$$\  $$$$$$\$$$$\   $$$$$$\  $$\   $$\  $$$$$$$\ 
 $$$$$$$$ |$$ |  $$ |\_$$  _|  $$  __$$\ $$  __$$\ $$  __$$\ $$  _$$  _$$\ $$  __$$\ $$ |  $$ |$$  _____|
