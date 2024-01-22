@@ -104,7 +104,15 @@ $$\   $$ |$$   ____| $$ |$$\ $$ |$$\ $$ |$$ |  $$ |$$ |  $$ | \____$$\
 enum directional {REVERSE = -1, FORWARD = 1};
 enum positional {UP = 1, DOWN = 0};
 enum turnMethod {FOR, TO};
-enum menuLink {NONE, COMPETITION, DRIVER_CONTROL, AUTONOMOUS};
+enum SetFlags {NONE,
+  SET_COMPETITION,
+  SET_DRIVER_CONTROL,
+  SET_AUTONOMOUS,
+  SET_AUTON_NEAR,
+  SET_AUTON_FAR,
+  SET_AUTON_OFF
+};
+enum Mode {COMPETITION, DRIVER_CONTROL, AUTONOMOUS, ERROR = -1};
 
 // Constants
 const int TILE_LENGTH = 24;
@@ -113,73 +121,77 @@ const int SCREENX = 480;
 const int SCREENY = 272;
 const float pi = 3.141592;
 
+class menuReturnFlags {
+public:
+  Mode mode = ERROR;
+  bool autonEnabled = true;
+  bool autonNear = true;
+  
+  // Constructor
+  menuReturnFlags(Mode setMode, bool isAutonEnabled):
+      mode(setMode),
+      autonEnabled(isAutonEnabled)
+    {};
+};
+
+class menuButton {
+public:
+  char* text;
+  SetFlags flag = NONE;
+  
+  // Constructor
+  menuButton(char* name, SetFlags action):
+      text(name),
+      flag(action)
+    {};
+};
+
 class MainMenu {
 public:
-
-  struct menuButton {
-    char* text;
-    menuLink menu = NONE;
-  };
-
-  menuLink run() {
-    int buttonIndex = 0;
-    
-    while (true)
-    {
-      clearDisplay();
-      Controller1.Screen.setCursor(4, 1);
-      Controller1.Screen.print("< ");
-      Controller1.Screen.print(menuButtons[buttonIndex].text);
-      Controller1.Screen.print(" >");
-      
-      while (true)
-      {
-        if (Controller1.ButtonLeft.pressing()) {
-          buttonIndex--;
-          if (buttonIndex < 0) {buttonIndex = 2;}
-          while (Controller1.ButtonLeft.pressing()) {wait(5, msec);}
-          break;
-        } else if (Controller1.ButtonRight.pressing()) {
-          buttonIndex++;
-          if (buttonIndex > 2) {buttonIndex = 0;}
-          while (Controller1.ButtonRight.pressing()) {wait(5, msec);}
-          break;
-        } else if (Controller1.ButtonA.pressing()) {
-          while (Controller1.ButtonA.pressing()) {wait(5, msec);}
-          clearDisplay();
-          return menuButtons[buttonIndex].menu;
-        }
-      }
-    }
-  }
-
+  // Constructor
   MainMenu() {
-    // Competition Button
-    CompetitionButton.text = "Competition Mode";
-    CompetitionButton.menu = COMPETITION;
-
-    // Driver Control Button
-    DCButton.text = "   Driver Control  ";
-    DCButton.menu = DRIVER_CONTROL;
-
-    // Autonomous Button
-    AutonButton.text = "   Autonomous   ";
-    AutonButton.menu = AUTONOMOUS;
-
-    menuButtons.reserve(3);
-    menuButtons.push_back(CompetitionButton);
-    menuButtons.push_back(DCButton);
-    menuButtons.push_back(AutonButton);
+    // Mode Selector Button Initialization
+    modeSelectorButtons.emplace_back("Competition", SET_COMPETITION);
+    modeSelectorButtons.emplace_back("Driver Control", SET_DRIVER_CONTROL);
+    modeSelectorButtons.emplace_back("Autonomous", SET_AUTONOMOUS);
   }
+
+  menuReturnFlags run() {
+    Mode returnMode = ERROR;
+    bool autonEnabled = true;
+    
+    SetFlags modeSet = modeSelector();
+    if (modeSet == SET_COMPETITION) returnMode = COMPETITION;
+    if (modeSet == SET_DRIVER_CONTROL) returnMode = DRIVER_CONTROL;
+    if (modeSet == SET_AUTONOMOUS) returnMode = AUTONOMOUS;
+
+    return menuReturnFlags(returnMode, autonEnabled);
+  }
+
 
 private:
 
-  std::vector<menuButton> menuButtons;
+  std::vector<menuButton> modeSelectorButtons;
 
-  // Buttons
-  menuButton CompetitionButton;
-  menuButton DCButton;
-  menuButton AutonButton;
+  SetFlags modeSelector() {
+    uint8_t buttonIndex = 0;
+    bool buttonSelected = false;
+
+    while (true) {
+      Controller1.Screen.setCursor(4, 1);
+      Controller1.Screen.print("< ");
+      Controller1.Screen.print(modeSelectorButtons[buttonIndex].text);
+
+      if (Controller1.ButtonA.pressing()) return modeSelectorButtons[buttonIndex].flag;
+      if (Controller1.ButtonLeft.pressing()) {buttonIndex++;continue;}
+      if (Controller1.ButtonLeft.pressing()) {buttonIndex--;continue;}
+      wait(25, msec);
+    }
+  }
+
+  SetFlags autonSelector() {
+
+  }
 
   void clearDisplay() {
     Controller1.Screen.setCursor(4, 1);
