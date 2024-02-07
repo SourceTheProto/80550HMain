@@ -112,7 +112,8 @@ enum SetFlags {NONE,
   SET_AUTON_FAR,
   SET_AUTON_OFF
 };
-enum Mode {COMPETITION, DRIVER_CONTROL, AUTONOMOUS, ERROR = -1};
+enum RunMode {COMPETITION, DRIVER_CONTROL, AUTONOMOUS, ERROR = -1};
+enum AutonMode {NEAR, FAR, OFF};
 
 // Constants
 const int TILE_LENGTH = 24;
@@ -123,14 +124,13 @@ const float pi = 3.141592;
 
 class menuReturnFlags {
 public:
-  Mode mode = ERROR;
-  bool autonEnabled = true;
-  bool autonNear = true;
+  RunMode mode = ERROR;
+  AutonMode auton = ERROR;
   
   // Constructor
-  menuReturnFlags(Mode setMode, bool isAutonEnabled):
+  menuReturnFlags(RunMode setMode, AutonMode autonMode):
       mode(setMode),
-      autonEnabled(isAutonEnabled)
+      auton(autonMode)
     {};
 };
 
@@ -150,47 +150,77 @@ class MainMenu {
 public:
   // Constructor
   MainMenu() {
-    // Mode Selector Button Initialization
+    // RunMode Selector Button Initialization
     modeSelectorButtons.emplace_back("Competition", SET_COMPETITION);
     modeSelectorButtons.emplace_back("Driver Control", SET_DRIVER_CONTROL);
     modeSelectorButtons.emplace_back("Autonomous", SET_AUTONOMOUS);
+
+    // Auton Mode Selector Button Initialization
+    autonModeButtons.emplace_back("Auton - Near", SET_AUTON_NEAR);
+    autonModeButtons.emplace_back("Auton - Far", SET_AUTON_FAR);
+    autonModeButtons.emplace_back("Auton - Off", SET_AUTON_OFF);
   }
 
   menuReturnFlags run() {
-    Mode returnMode = ERROR;
-    bool autonEnabled = true;
+    RunMode returnMode = ERROR;
+    AutonMode returnAuton = true;
     
-    SetFlags modeSet = modeSelector();
-    if (modeSet == SET_COMPETITION) returnMode = COMPETITION;
-    if (modeSet == SET_DRIVER_CONTROL) returnMode = DRIVER_CONTROL;
-    if (modeSet == SET_AUTONOMOUS) returnMode = AUTONOMOUS;
+    SetFlags modeSet = promptSelection(modeSelectorButtons);
+    if (modeSet == SET_COMPETITION)
+    {
+      returnMode = COMPETITION;
+      SetFlags autonSet = promptSelection(autonModeButtons);
+	  clearDisplay();
 
-    return menuReturnFlags(returnMode, autonEnabled);
+      if (autonSet == SET_AUTON_FAR) returnAuton = FAR;
+      if (autonSet == SET_AUTON_NEAR) returnAuton = NEAR;
+      if (autonSet == SET_AUTON_OFF) returnAuton = OFF;
+    }
+    if (modeSet == SET_AUTONOMOUS)
+    {
+      returnMode = AUTONOMOUS;
+      SetFlags autonSet = autonSelector();
+	  clearDisplay();
+
+      if (autonSet == SET_AUTON_FAR) returnAuton = FAR;
+      if (autonSet == SET_AUTON_NEAR) returnAuton = NEAR;
+      if (autonSet == SET_AUTON_OFF) returnAuton = OFF;
+    }
+    if (modeSet == SET_DRIVER_CONTROL) returnMode = DRIVER_CONTROL;
+
+    return menuReturnFlags(returnMode, returnAuton);
   }
 
 
 private:
 
   std::vector<menuButton> modeSelectorButtons;
+  std::vector<menuButton> autonModeButtons;
 
-  SetFlags modeSelector() {
+  SetFlags promptSelection(std::vector<menuButton> &buttonArray) {
     uint8_t buttonIndex = 0;
-    bool buttonSelected = false;
-
+    
     while (true) {
       Controller1.Screen.setCursor(4, 1);
       Controller1.Screen.print("< ");
-      Controller1.Screen.print(modeSelectorButtons[buttonIndex].text);
+      Controller1.Screen.print(buttonArray[buttonIndex].text);
+      Controller1.Screen.print(" >");
 
-      if (Controller1.ButtonA.pressing()) return modeSelectorButtons[buttonIndex].flag;
-      if (Controller1.ButtonLeft.pressing()) {buttonIndex++;continue;}
-      if (Controller1.ButtonLeft.pressing()) {buttonIndex--;continue;}
+      if (Controller1.ButtonA.pressing()) return buttonArray[buttonIndex].flag;
+      if (Controller1.ButtonRight.pressing()) {
+        if (buttonIndex < buttonArray.size()-1) {
+          buttonIndex++;
+        } else {buttonIndex = 0;}
+        continue;
+      }
+      if (Controller1.ButtonLeft.pressing()) {
+        if (buttonIndex > 0) {
+          buttonIndex--;
+        } else {buttonIndex = buttonArray.size()-1;}
+        continue;
+      }
       wait(25, msec);
     }
-  }
-
-  SetFlags autonSelector() {
-
   }
 
   void clearDisplay() {
