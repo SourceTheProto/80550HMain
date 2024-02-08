@@ -105,143 +105,123 @@ $$\   $$ |$$   ____| $$ |$$\ $$ |$$\ $$ |$$ |  $$ |$$ |  $$ | \____$$\
 enum directional {REVERSE = -1, FORWARD = 1};
 enum positional {UP = 1, DOWN = 0};
 enum turnMethod {FOR, TO};
-enum menuLink {NONE, COMPETITION, DRIVER_CONTROL, AUTONOMOUS, ENABLED, DISABLED};
+enum SetFlags {NONE,
+  SET_COMPETITION,
+  SET_DRIVER_CONTROL,
+  SET_AUTONOMOUS,
+  SET_AUTON_NEAR,
+  SET_AUTON_FAR,
+  SET_AUTON_OFF
+};
+enum RunMode {COMPETITION, DRIVER_CONTROL, AUTONOMOUS, ERROR = -1};
+enum AutonMode {NEAR, FAR, OFF};
 
 // Constants
 #define TILE_LENGTH 24
 #define WHEEL_DIAMETER 4
 const float pi = 3.141592;
 
-struct menuButton {
+class menuReturnFlags {
+public:
+  RunMode mode = ERROR;
+  AutonMode auton = ERROR;
+  
+  // Constructor
+  menuReturnFlags(RunMode setMode, AutonMode autonMode):
+      mode(setMode),
+      auton(autonMode)
+    {};
+};
+
+class menuButton {
+public:
   char* text;
-  menuLink menu = NONE;
+  SetFlags flag = NONE;
+  
+  // Constructor
+  menuButton(char* name, SetFlags action):
+      text(name),
+      flag(action)
+    {};
 };
 
 class MainMenu {
 public:
-
-  menuLink run() {
-    int buttonIndex = 0;
-    
-    while (true)
-    {
-      clearDisplay();
-      Controller1.Screen.setCursor(4, 1);
-      Controller1.Screen.print("< ");
-      Controller1.Screen.print(menuButtons[buttonIndex].text);
-      Controller1.Screen.print(" >");
-      
-      while (true)
-      {
-        if (Controller1.ButtonLeft.pressing()) {
-          buttonIndex--;
-          if (buttonIndex < 0) {buttonIndex = (menuButtons.size()-1);}
-          while (Controller1.ButtonLeft.pressing()) {wait(5, msec);}
-          break;
-        } else if (Controller1.ButtonRight.pressing()) {
-          buttonIndex++;
-          if (buttonIndex > menuButtons.size()-1) {buttonIndex = 0;}
-          while (Controller1.ButtonRight.pressing()) {wait(5, msec);}
-          break;
-        } else if (Controller1.ButtonA.pressing()) {
-          while (Controller1.ButtonA.pressing()) {wait(5, msec);}
-          clearDisplay();
-          return menuButtons[buttonIndex].menu;
-        }
-      }
-    }
-  }
-
+  // Constructor
   MainMenu() {
-    // Competition Button
-    CompetitionButton.text = "Competition Mode";
-    CompetitionButton.menu = COMPETITION;
+    // RunMode Selector Button Initialization
+    modeSelectorButtons.emplace_back("Competition", SET_COMPETITION);
+    modeSelectorButtons.emplace_back("Driver Control", SET_DRIVER_CONTROL);
+    modeSelectorButtons.emplace_back("Autonomous", SET_AUTONOMOUS);
 
-    // Driver Control Button
-    DCButton.text = "   Driver Control  ";
-    DCButton.menu = DRIVER_CONTROL;
-
-    // Autonomous Button
-    AutonButton.text = "   Autonomous   ";
-    AutonButton.menu = AUTONOMOUS;
-
-    menuButtons.reserve(3);
-    menuButtons.push_back(CompetitionButton);
-    menuButtons.push_back(DCButton);
-    menuButtons.push_back(AutonButton);
+    // Auton Mode Selector Button Initialization
+    autonModeButtons.emplace_back("Auton - Near", SET_AUTON_NEAR);
+    autonModeButtons.emplace_back("Auton - Far", SET_AUTON_FAR);
+    autonModeButtons.emplace_back("Auton - Off", SET_AUTON_OFF);
   }
+
+  menuReturnFlags run() {
+    RunMode returnMode = ERROR;
+    AutonMode returnAuton = true;
+    
+    SetFlags modeSet = promptSelection(modeSelectorButtons);
+    if (modeSet == SET_COMPETITION)
+    {
+      returnMode = COMPETITION;
+      SetFlags autonSet = promptSelection(autonModeButtons);
+	  clearDisplay();
+
+      if (autonSet == SET_AUTON_FAR) returnAuton = FAR;
+      if (autonSet == SET_AUTON_NEAR) returnAuton = NEAR;
+      if (autonSet == SET_AUTON_OFF) returnAuton = OFF;
+    }
+    if (modeSet == SET_AUTONOMOUS)
+    {
+      returnMode = AUTONOMOUS;
+	  autonModeButtons.pop_back();
+      SetFlags autonSet = autonSelector();
+	  clearDisplay();
+
+      if (autonSet == SET_AUTON_FAR) returnAuton = FAR;
+      if (autonSet == SET_AUTON_NEAR) returnAuton = NEAR;
+      if (autonSet == SET_AUTON_OFF) returnAuton = OFF;
+    }
+    if (modeSet == SET_DRIVER_CONTROL) returnMode = DRIVER_CONTROL;
+
+    return menuReturnFlags(returnMode, returnAuton);
+  }
+
 
 private:
 
-  std::vector<menuButton> menuButtons;
+  std::vector<menuButton> modeSelectorButtons;
+  std::vector<menuButton> autonModeButtons;
 
-  // Buttons
-  menuButton CompetitionButton;
-  menuButton DCButton;
-  menuButton AutonButton;
-
-  void clearDisplay() {
-    Controller1.Screen.setCursor(4, 1);
-    Controller1.Screen.print("                            ");
-  }
-};
-
-class AutonSelector {
-public:
-
-  menuLink run() {
-    int buttonIndex = 0;
+  SetFlags promptSelection(std::vector<menuButton> &buttonArray) {
+    uint8_t buttonIndex = 0;
     
-    while (true)
-    {
-      clearDisplay();
+    while (true) {
       Controller1.Screen.setCursor(4, 1);
       Controller1.Screen.print("< ");
-      Controller1.Screen.print(menuButtons[buttonIndex].text);
+      Controller1.Screen.print(buttonArray[buttonIndex].text);
       Controller1.Screen.print(" >");
-      
-      while (true)
-      {
-        if (Controller1.ButtonLeft.pressing()) {
-          buttonIndex--;
-          if (buttonIndex < 0) {buttonIndex = (menuButtons.size()-1);}
-          while (Controller1.ButtonLeft.pressing()) {wait(5, msec);}
-          break;
-        } else if (Controller1.ButtonRight.pressing()) {
+
+      if (Controller1.ButtonA.pressing()) return buttonArray[buttonIndex].flag;
+      if (Controller1.ButtonRight.pressing()) {
+        if (buttonIndex < buttonArray.size()-1) {
           buttonIndex++;
-          if (buttonIndex > menuButtons.size()-1) {buttonIndex = 0;}
-          while (Controller1.ButtonRight.pressing()) {wait(5, msec);}
-          break;
-        } else if (Controller1.ButtonA.pressing()) {
-          while (Controller1.ButtonA.pressing()) {wait(5, msec);}
-          clearDisplay();
-          return menuButtons[buttonIndex].menu;
-        }
+        } else {buttonIndex = 0;}
+        continue;
       }
+      if (Controller1.ButtonLeft.pressing()) {
+        if (buttonIndex > 0) {
+          buttonIndex--;
+        } else {buttonIndex = buttonArray.size()-1;}
+        continue;
+      }
+      wait(25, msec);
     }
   }
-
-  AutonSelector() {
-    // Competition Button
-    EnabledButton.text = "  Auton Enabled  ";
-    EnabledButton.menu = ENABLED;
-
-    // Driver Control Button
-    DisabledButton.text = "  Auton Disabled ";
-    DisabledButton.menu = DISABLED;
-
-    menuButtons.reserve(2);
-    menuButtons.push_back(EnabledButton);
-    menuButtons.push_back(DisabledButton);
-  }
-
-private:
-
-  std::vector<menuButton> menuButtons;
-
-  // Buttons
-  menuButton EnabledButton;
-  menuButton DisabledButton;
 
   void clearDisplay() {
     Controller1.Screen.setCursor(4, 1);
@@ -298,29 +278,30 @@ int main() {
   thread Calibrator = thread(calibrate);
 
   MainMenu StartMenu;
-  menuLink selectedMenu = StartMenu.run();
+  menuReturnFlags selectedMenu = StartMenu.run();
 
-  if (selectedMenu == COMPETITION) {
-    Competition.autonomous(autonomous);
+  if (selectedMenu.mode == COMPETITION) {
     Competition.drivercontrol(driverControl);
 
-    AutonSelector selector;
-    menuLink selectedAuton = selector.run();
-    if (selectedAuton == ENABLED) autonEnabled = true;
-    if (selectedAuton == DISABLED) autonEnabled = false;
+    if (selectedMenu.auton == FAR) Competition.autonomous(autonomousFar);
+    if (selectedMenu.auton == NEAR) Competition.autonomous(autonomousNear);
+	if (selectedMenu.auton == OFF) autonEnabled = false;
 
-	  Calibrator.join();
+	Calibrator.join();
     thread BarrierControl = thread(barrierControlThread);
     thread DM = thread(DisplayManager);
-  } else if (selectedMenu == DRIVER_CONTROL) {
+  }
+  else if (selectedMenu.mode == DRIVER_CONTROL) {
     thread BarrierControl = thread(barrierControlThread);
     Calibrator.join();
     thread DM = thread(DisplayManager);
     driverControl();
-  } else if (selectedMenu == AUTONOMOUS) {
-	  Calibrator.join();
+  }
+  else if (selectedMenu.mode == AUTONOMOUS) {
+	Calibrator.join();
     thread DM = thread(DisplayManager);
-    autonomous();
+    if (selectedMenu.auton == FAR) autonomousFar();
+    if (selectedMenu.auton == NEAR) autonomousNear();
   }
 
   while (true) {
@@ -338,7 +319,7 @@ $$ |  $$ |$$ |  $$ |  $$ |$$\ $$ |  $$ |$$ |  $$ |$$ |  $$ |$$ | $$ | $$ |$$ |  
 $$ |  $$ |\$$$$$$  |  \$$$$  |\$$$$$$  |$$ |  $$ |\$$$$$$  |$$ | $$ | $$ |\$$$$$$  |\$$$$$$  |$$$$$$$  |
 \__|  \__| \______/    \____/  \______/ \__|  \__| \______/ \__| \__| \__| \______/  \______/ \______*/
 
-void autonomous() {
+void autonomousNear() {
   if (!autonEnabled) return;
 
   Intake.spin(forward);
@@ -347,6 +328,8 @@ void autonomous() {
   Intake.spin(reverse);
   drive(FORWARD, .25);
 }
+
+void autonomousFar() {}
 
 void drive(directional direction, double dist)
 {
