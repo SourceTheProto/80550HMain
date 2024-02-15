@@ -525,12 +525,12 @@ void DisplayManager() {
       Brain.Screen.setCursor(i, 1);
       Brain.Screen.print(debugBuffer[i-1]);
     }
-	debugTimer -= 0.2;
-	while (debugTimer != 0 && debugTimer != DEBUG_TIMEOUT_SECONDS) {
-		debugTimer -= 0.2;
-    if (debugTimer < 0) debugTimer = 0;
-    wait(200, msec);
-	}
+    debugTimer -= 0.2;
+    while (debugTimer != 0 && debugTimer != DEBUG_TIMEOUT_SECONDS) {
+      debugTimer -= 0.2;
+      if (debugTimer < 0) debugTimer = 0;
+      wait(200, msec);
+    }
   }
 }
 
