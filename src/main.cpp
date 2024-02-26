@@ -46,6 +46,7 @@ $$$$$$$  |$$ |$$ |  $$ |\$$$$$$$ |$$ |$$ |  $$ |\$$$$$$$ |$$$$$$$  |
 
 #include "vex.h"
 #include <vector>
+#include <unordered_map>
 using namespace vex;
 competition Competition;
 
@@ -147,19 +148,6 @@ public:
 
 class MainMenu {
 public:
-  // Constructor
-  MainMenu() {
-    // RunMode Selector Button Initialization
-    modeSelectorButtons.emplace_back("Competition", SET_COMPETITION);
-    modeSelectorButtons.emplace_back("Driver Control", SET_DRIVER_CONTROL);
-    modeSelectorButtons.emplace_back("Autonomous", SET_AUTONOMOUS);
-
-    // Auton Mode Selector Button Initialization
-    autonModeButtons.emplace_back("Auton - Near", SET_AUTON_NEAR);
-    autonModeButtons.emplace_back("Auton - Far", SET_AUTON_FAR);
-    autonModeButtons.emplace_back("Auton - Off", SET_AUTON_OFF);
-  }
-
   menuReturnFlags run() {
     RunMode returnMode = ERROR;
     AutonMode returnAuton = true;
@@ -191,9 +179,21 @@ public:
     return menuReturnFlags(returnMode, returnAuton);
   }
 
+  void addButton(char* containerMenuName, char* buttonText, SetFlags flag) {
+    buttonArrays.at(containerMenuName).emplace_back(buttonText, flag);
+  }
+
+  void addButton(char* containerMenuName, char* buttonText, SetFlags flag, char* submenuName) {
+    buttonArrays.at(containerMenuName).emplace_back(buttonText, flag);
+    buttonArrays.emplace(submenuName, std::vector<menubutton>());
+  }
+
 
 private:
 
+  std::unordered_map<char*, std::vector<menuButton>> buttonArrays {
+    {"MAIN", std::vector<menuButton>()}
+  }; 
   std::vector<menuButton> modeSelectorButtons;
   std::vector<menuButton> autonModeButtons;
 
@@ -278,6 +278,14 @@ int main() {
   thread Calibrator = thread(calibrate);
 
   MainMenu StartMenu;
+  // Adding Buttons
+  MainMenu.addButton("MAIN", "Competition", SET_COMPETITION, "AutonSelector");
+  MainMenu.addButton("MAIN", "Driver Control", SET_DRIVER_CONTROL);
+  MainMenu.addButton("MAIN", "Autonomous", SET_AUTONOMOUS, "AutonSelector");
+  MainMenu.addButton("AutonSelector", "Auton - Near", SET_AUTON_NEAR);
+  MainMenu.addButton("AutonSelector", "Auton - Far", SET_AUTON_FAR);
+  MainMenu.addButton("AutonSelector", "Auton - Off", SET_AUTON_OFF);
+
   menuReturnFlags selectedMenu = StartMenu.run();
 
   if (selectedMenu.mode == COMPETITION) {
@@ -285,9 +293,9 @@ int main() {
 
     if (selectedMenu.auton == FAR) Competition.autonomous(autonomousFar);
     if (selectedMenu.auton == NEAR) Competition.autonomous(autonomousNear);
-	if (selectedMenu.auton == OFF) autonEnabled = false;
+	  if (selectedMenu.auton == OFF) autonEnabled = false;
 
-	Calibrator.join();
+	  Calibrator.join();
     thread BarrierControl = thread(barrierControlThread);
     thread DM = thread(DisplayManager);
   }
@@ -298,7 +306,7 @@ int main() {
     driverControl();
   }
   else if (selectedMenu.mode == AUTONOMOUS) {
-	Calibrator.join();
+	  Calibrator.join();
     thread DM = thread(DisplayManager);
     if (selectedMenu.auton == FAR) autonomousFar();
     if (selectedMenu.auton == NEAR) autonomousNear();
